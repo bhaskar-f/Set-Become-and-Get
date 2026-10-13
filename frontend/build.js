@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const esbuild = require('esbuild');
 const root = __dirname;
 const output = path.join(root, 'public');
 if (process.env.VERCEL === '1' && !process.env.PUBLIC_API_BASE_URL)
@@ -11,6 +12,17 @@ if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.
   throw new Error('PUBLIC_API_BASE_URL must be an HTTP(S) API base URL ending in /api.');
 fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(path.join(output, 'data'), { recursive: true });
+esbuild.buildSync({
+  entryPoints: [path.join(root, 'analytics-entry.js')],
+  outfile: path.join(output, 'analytics.js'),
+  bundle: true,
+  platform: 'browser',
+  format: 'iife',
+  target: ['es2017'],
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.VERCEL === '1' ? 'production' : 'development'),
+  },
+});
 for (const name of ['index.html', 'style.css', 'script.js', 'admin.js', 'public-pages.js', 'job-details.js', 'board-details.js', 'job-content.js', 'job-content-language.js', 'youtube-video.js', 'i18n.js', 'data.json', 'logo.png'])
   fs.copyFileSync(path.join(root, name), path.join(output, name));
 fs.cpSync(path.join(root, 'locales'), path.join(output, 'locales'), { recursive: true });

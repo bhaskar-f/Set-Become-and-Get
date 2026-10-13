@@ -24,6 +24,11 @@ test('Vercel builds require an explicit public API URL and embed only that URL',
   assert.ok(fs.existsSync(path.join(root, 'public', 'i18n.js')));
   assert.ok(fs.existsSync(path.join(root, 'public', 'job-content-language.js')));
   assert.ok(fs.readFileSync(path.join(root, 'public', 'job-content.js'), 'utf8').includes('translationMap'));
+  const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
+  assert.match(html, /<script defer src="\/analytics\.js"><\/script>/);
+  const analytics = fs.readFileSync(path.join(root, 'public', 'analytics.js'), 'utf8');
+  assert.match(analytics, /@vercel\/analytics/);
+  assert.match(analytics, /_vercel\/insights\/script\.js/);
   for (const developmentOnly of ['translation-preview.html', 'translation-preview.js', 'translation-preview-restore.js', 'dev-fixtures/content-translated-job.fixture.js'])
     assert.equal(fs.existsSync(path.join(root, 'public', developmentOnly)), false, `${developmentOnly} must not enter production output`);
   for (const locale of ['en', 'hi', 'bn'])
