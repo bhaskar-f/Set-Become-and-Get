@@ -2,5 +2,14 @@
   "name": "setbget-frontend",
   "version": "1.0.0",
   "private": true,
-  "scripts": { "build": "node build.js", "test": "node --test *.test.js" }
+  "scripts": {
+    "build": "node build.js",
+    "test": "node --test *.test.js"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
 }
