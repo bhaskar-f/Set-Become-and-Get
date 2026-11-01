@@ -24,7 +24,7 @@ esbuild.buildSync({
     'process.env.NODE_ENV': JSON.stringify(process.env.VERCEL === '1' ? 'production' : 'development'),
   },
 });
-for (const name of ['index.html', 'style.css', 'script.js', 'admin.js', 'public-pages.js', 'job-details.js', 'board-details.js', 'job-content.js', 'job-content-language.js', 'youtube-video.js', 'i18n.js', 'data.json', 'logo.png'])
+for (const name of ['index.html', 'style.css', 'script.js', 'admin.js', 'public-pages.js', 'job-details.js', 'board-details.js', 'job-content.js', 'job-content-language.js', 'youtube-video.js', 'i18n.js', 'offline-connectivity.js', 'data.json', 'logo.png'])
   fs.copyFileSync(path.join(root, name), path.join(output, name));
 fs.cpSync(path.join(root, 'locales'), path.join(output, 'locales'), { recursive: true });
 for (const name of ['favicon.ico', 'favicon-16x16.png', 'favicon-32x32.png', 'favicon-48x48.png', 'favicon-192x192.png', 'favicon-512x512.png'])

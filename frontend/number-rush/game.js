@@ -246,6 +246,4 @@
     if (document.hidden && state === "playing") pause();
   });
   ui.welcomeBest.textContent = format(best);
-  if ("serviceWorker" in navigator && location.protocol !== "file:")
-    navigator.serviceWorker.register("/service-worker.js").catch(() => {});
 })();

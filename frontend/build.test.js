@@ -23,6 +23,13 @@ test('Vercel builds require an explicit public API URL and embed only that URL',
   assert.doesNotMatch(config, /SECRET|MONGODB|PASSWORD|JWT_/);
   assert.ok(fs.existsSync(path.join(root, 'public', 'i18n.js')));
   assert.ok(fs.existsSync(path.join(root, 'public', 'job-content-language.js')));
+  assert.ok(fs.existsSync(path.join(root, 'public', 'offline-connectivity.js')));
+  assert.ok(fs.existsSync(path.join(root, 'public', 'service-worker.js')));
+  assert.ok(fs.existsSync(path.join(root, 'public', 'offline.html')));
+  for (const asset of ['index.html', 'game.css', 'game.js', 'questions.js', 'storage.js'])
+    assert.ok(fs.existsSync(path.join(root, 'public', 'number-rush', asset)), `${asset} must ship with the game`);
+  assert.match(fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8'), /offline-connectivity\.js/);
+  assert.match(fs.readFileSync(path.join(root, 'public', 'service-worker.js'), 'utf8'), /setbget-number-rush-v2/);
   assert.ok(fs.readFileSync(path.join(root, 'public', 'job-content.js'), 'utf8').includes('translationMap'));
   const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
   assert.match(html, /<script defer src="\/analytics\.js"><\/script>/);
