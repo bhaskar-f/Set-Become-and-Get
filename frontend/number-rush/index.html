@@ -3,13 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f4f5f2" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="robots" content="noindex,follow" />
     <meta
       name="description"
       content="A quick offline-friendly math arcade game from SetBGet."
     />
     <title>Number Rush · SetBGet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=42dot+Sans:wght@300..800&family=Inria+Sans:wght@400;700&family=Mada:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/number-rush/game.css" />
     <script defer src="/offline-connectivity.js"></script>
     <script defer src="/number-rush/questions.js"></script>
@@ -19,12 +22,12 @@
   <body>
     <main class="shell">
       <header class="topbar">
-        <a class="wordmark" href="/" aria-label="SetBGet home"
-          ><span class="mark">S</span><span>SetBGet</span></a
-        >
+        <a class="wordmark" href="/" aria-label="SetBGet home">
+          <img src="/logo.png" alt="SetBGet" />
+        </a>
         <div class="game-brand">
-          <span class="live-dot"></span> NUMBER RUSH
-          <span id="network" class="network">READY OFFLINE</span>
+          <span class="live-dot"></span><span>NUMBER RUSH</span>
+          <span id="network" class="network" aria-live="polite" hidden></span>
         </div>
         <button
           class="icon-button"
@@ -36,19 +39,17 @@
         </button>
       </header>
       <section id="welcome" class="welcome">
-        <div class="eyebrow">THE 30-SECOND CHALLENGE</div>
-        <h1>Think fast.<br /><em>Stay sharp.</em></h1>
+        <div id="welcomeEyebrow" class="eyebrow">THE 30-SECOND CHALLENGE</div>
+        <h1 id="welcomeHeading">Think fast. Stay sharp.</h1>
         <p>
-          Four choices. One right answer. How many can you clear before the
-          clock runs out?
+          <span id="welcomeDescription">Four choices. One right answer. How many can you clear before time runs out?</span>
         </p>
         <div class="welcome-meta">
           <span>⌁ &nbsp; 30 seconds</span><span>↗ &nbsp; Combo scoring</span
           ><span>⌨ &nbsp; Keys 1–4</span>
         </div>
-        <button id="start" class="primary">
-          Start your run <span>→</span>
-        </button>
+        <button id="start" class="primary">Start your run →</button>
+        <div id="welcomeStatus" class="welcome-status">NUMBER RUSH</div>
         <div class="best-line">
           PERSONAL BEST <strong id="welcomeBest">0</strong>
         </div>

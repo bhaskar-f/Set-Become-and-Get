@@ -1,6 +1,7 @@
 (function () {
   'use strict';
   const KEY = 'setbget:offline:return-url';
+  const OFFLINE_ENTRY_KEY = 'setbget:number-rush:offline-entry';
   const GAME_PATH = '/number-rush';
   const isGamePath = pathname => pathname === GAME_PATH || pathname.startsWith(`${GAME_PATH}/`);
   const isGame = () => isGamePath(location.pathname);
@@ -8,6 +9,8 @@
     get() { try { return sessionStorage.getItem(KEY); } catch (_) { return null; } },
     set(value) { try { sessionStorage.setItem(KEY, value); return true; } catch (_) { return false; } },
     clear() { try { sessionStorage.removeItem(KEY); } catch (_) {} },
+    markOfflineEntry() { try { sessionStorage.setItem(OFFLINE_ENTRY_KEY, '1'); return true; } catch (_) { return false; } },
+    clearOfflineEntry() { try { sessionStorage.removeItem(OFFLINE_ENTRY_KEY); } catch (_) {} },
   };
   function checkedReturnUrl(value) {
     if (typeof value !== 'string' || !value) return null;
@@ -42,14 +45,15 @@
     if (!existing) safeStore.set(new URL(location.href).href);
     redirectingOffline = true;
     await registrationReady;
-    if (!isGame()) location.replace(`${GAME_PATH}/`);
+    if (!isGame()) location.replace(safeStore.markOfflineEntry() ? `${GAME_PATH}/` : `${GAME_PATH}/?offline=1`);
   });
 
   let restoring = false;
-  async function restoreWhenReachable() {
+  async function restoreWhenReachable(initialLoad = false) {
     if (restoring || !isGame()) return;
     const target = checkedReturnUrl(safeStore.get());
-    if (!target) { if (safeStore.get()) safeStore.clear(); return; }
+    if (!target && initialLoad) { if (safeStore.get()) safeStore.clear(); return; }
+    if (!target && safeStore.get()) { safeStore.clear(); return; }
     restoring = true;
     const delays = [0, 700, 1400, 2800, 5000, 5000, 5000, 5000];
     try {
@@ -62,16 +66,20 @@
           const response = await fetch(probe.href, { method: 'GET', cache: 'no-store', credentials: 'omit' });
           if (!response.ok) continue;
           if (!navigator.onLine) return;
+          const shouldDefer = typeof window.NumberRushHandleConnectionRestored === 'function'
+            ? window.NumberRushHandleConnectionRestored(target ? target.href : null)
+            : false;
+          if (shouldDefer || !target) return;
           location.replace(target.href);
           return;
         } catch (_) { /* Retry when the browser is online but the site is not reachable yet. */ }
       }
     } finally { restoring = false; }
   }
-  window.addEventListener('online', restoreWhenReachable);
-  if (isGame() && navigator.onLine) restoreWhenReachable();
+  window.addEventListener('online', () => restoreWhenReachable(false));
+  if (isGame() && navigator.onLine) restoreWhenReachable(true);
 
   const savedOnThisPage = checkedReturnUrl(safeStore.get());
   if (!isGame() && savedOnThisPage && savedOnThisPage.href === new URL(location.href).href && navigator.onLine)
-    safeStore.clear();
+    { safeStore.clear(); safeStore.clearOfflineEntry(); }
 })();

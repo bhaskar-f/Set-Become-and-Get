@@ -20,6 +20,11 @@
     feedback: $("feedback"),
     count: $("questionCount"),
     overlay: $("pauseOverlay"),
+    welcomeEyebrow: $("welcomeEyebrow"),
+    welcomeHeading: $("welcomeHeading"),
+    welcomeDescription: $("welcomeDescription"),
+    welcomeStatus: $("welcomeStatus"),
+    network: $("network"),
   };
   const stored = NumberRushStorage.read();
   let best = stored.best,
@@ -35,8 +40,32 @@
     remaining = 30000,
     startedAt = 0,
     raf = 0,
-    lastLevel = 1;
+    lastLevel = 1,
+    restoreAfterRound = null,
+    restoreTimer = 0,
+    connectionRestored = false;
+  const OFFLINE_ENTRY_KEY = "setbget:number-rush:offline-entry";
+  const offlineLaunch = (() => {
+    let marked = false, hasReturnTarget = false;
+    try {
+      marked = sessionStorage.getItem(OFFLINE_ENTRY_KEY) === "1";
+      hasReturnTarget = Boolean(sessionStorage.getItem("setbget:offline:return-url"));
+      sessionStorage.removeItem(OFFLINE_ENTRY_KEY);
+    } catch (_) {}
+    if (new URLSearchParams(location.search).get("offline") === "1") marked = true;
+    return marked || hasReturnTarget || !navigator.onLine;
+  })();
   const format = (value) => String(value).padStart(3, "0");
+  function setWelcomeMode(offline) {
+    ui.welcomeEyebrow.textContent = offline ? "CONNECTION INTERRUPTED" : "THE 30-SECOND CHALLENGE";
+    ui.welcomeHeading.textContent = offline ? "No internet? Play Number Rush." : "Think fast. Stay sharp.";
+    ui.welcomeDescription.textContent = offline
+      ? "Your connection is taking a break. Keep your mind active while you wait."
+      : "Four choices. One right answer. How many can you clear before time runs out?";
+    ui.start.textContent = offline ? "Play Number Rush →" : "Start your run →";
+    ui.welcomeStatus.textContent = offline ? "OFFLINE · READY TO PLAY" : "NUMBER RUSH";
+    ui.welcomeStatus.classList.toggle("is-offline", offline);
+  }
   function renderLevel(level) {
     ui.level.replaceChildren(document.createTextNode(`0${level} `));
     const label = document.createElement("small");
@@ -50,6 +79,7 @@
   }
   function startGame() {
     cancelAnimationFrame(raf);
+    clearTimeout(restoreTimer);
     score = 0;
     streak = 0;
     highCombo = 0;
@@ -202,6 +232,11 @@
           : "Good warm-up.";
     show("result");
     ui.welcomeBest.textContent = format(best);
+    if (restoreAfterRound && navigator.onLine) {
+      restoreTimer = setTimeout(() => {
+        if (state === "over" && navigator.onLine) location.replace(restoreAfterRound);
+      }, 2200);
+    }
   }
   function exit() {
     if (state === "playing" || state === "paused") {
@@ -234,13 +269,39 @@
     }
   });
   function network() {
+    if (connectionRestored) return;
     const online = navigator.onLine;
-    const badge = $("network");
-    badge.textContent = online ? "READY OFFLINE" : "OFFLINE MODE";
-    badge.classList.toggle("offline", !online);
+    ui.network.hidden = online;
+    ui.network.textContent = online ? "" : "OFFLINE";
+    ui.network.classList.toggle("offline", !online);
   }
+  setWelcomeMode(offlineLaunch);
   window.addEventListener("online", network);
-  window.addEventListener("offline", network);
+  window.addEventListener("offline", () => {
+    connectionRestored = false;
+    network();
+    if (state === "ready") setWelcomeMode(true);
+  });
+  window.NumberRushHandleConnectionRestored = (returnUrl) => {
+    connectionRestored = true;
+    ui.network.hidden = false;
+    ui.network.textContent = "CONNECTION RESTORED";
+    ui.network.classList.remove("offline");
+    setWelcomeMode(false);
+    try {
+      sessionStorage.removeItem(OFFLINE_ENTRY_KEY);
+      const current = new URL(location.href);
+      if (current.searchParams.get("offline") === "1") {
+        current.searchParams.delete("offline");
+        history.replaceState(history.state, "", `${current.pathname}${current.search}${current.hash}`);
+      }
+    } catch (_) {}
+    if (returnUrl && (state === "playing" || state === "paused")) {
+      restoreAfterRound = returnUrl;
+      return true;
+    }
+    return false;
+  };
   network();
   document.addEventListener("visibilitychange", () => {
     if (document.hidden && state === "playing") pause();

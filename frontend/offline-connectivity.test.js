@@ -19,7 +19,7 @@ function run(url, options = {}) {
     location: { href: location.href, origin: location.origin, pathname: location.pathname, replace(value) { this.replaced = value; } },
     sessionStorage: options.storageThrows ? { getItem() { throw Error('blocked'); }, setItem() { throw Error('blocked'); }, removeItem() { throw Error('blocked'); } } : storage,
     navigator: { onLine: options.online ?? true },
-    window: { addEventListener(name, callback) { listeners[name] = callback; } },
+    window: { addEventListener(name, callback) { listeners[name] = callback; }, NumberRushHandleConnectionRestored: options.connectionHandler },
     fetch: options.fetch || (async () => ({ ok: true })),
     setTimeout(callback) { callback(); return 1; }, clearTimeout() {},
   };
@@ -33,6 +33,21 @@ test('offline transition preserves an exact same-origin job URL for automatic re
   await page.listeners.offline();
   assert.equal(page.values.get(KEY), 'https://setbget.test/jobs/chemist?state=WB&page=2#eligibility');
   assert.equal(page.context.location.replaced, '/number-rush/');
+  assert.equal(page.values.get('setbget:number-rush:offline-entry'), '1');
+});
+
+test('a reachable connection is handed to gameplay so the active round can finish', async () => {
+  const values = new Map([[KEY, 'https://setbget.test/jobs/chemist?state=WB#eligibility']]);
+  let deferredUrl;
+  const game = run('https://setbget.test/number-rush/', {
+    values,
+    online: false,
+    connectionHandler(url) { deferredUrl = url; return true; },
+  });
+  game.context.navigator.onLine = true;
+  await game.listeners.online();
+  assert.equal(deferredUrl, 'https://setbget.test/jobs/chemist?state=WB#eligibility');
+  assert.equal(game.context.location.replaced, undefined);
 });
 
 test('game reconnect verifies reachability before restoring the saved route', async () => {
@@ -54,7 +69,7 @@ test('direct game visits and blocked session storage do not create a return redi
   assert.equal(direct.context.location.replaced, undefined);
   const blocked = run('https://setbget.test/dashboard', { storageThrows: true });
   await blocked.listeners.offline();
-  assert.equal(blocked.context.location.replaced, '/number-rush/');
+  assert.equal(blocked.context.location.replaced, '/number-rush/?offline=1');
 });
 
 test('external return targets are rejected', async () => {
