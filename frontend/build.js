@@ -12,6 +12,7 @@ if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.
   throw new Error('PUBLIC_API_BASE_URL must be an HTTP(S) API base URL ending in /api.');
 fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(path.join(output, 'data'), { recursive: true });
+fs.mkdirSync(path.join(output, 'number-rush'), { recursive: true });
 esbuild.buildSync({
   entryPoints: [path.join(root, 'analytics-entry.js')],
   outfile: path.join(output, 'analytics.js'),
@@ -30,6 +31,10 @@ for (const name of ['favicon.ico', 'favicon-16x16.png', 'favicon-32x32.png', 'fa
   fs.copyFileSync(path.join(root, 'assets', 'favicons', name), path.join(output, name));
 for (const name of ['qualification-taxonomy.json', 'india-locations.json', 'job-taxonomy.json'])
   fs.copyFileSync(path.join(root, 'data', name), path.join(output, 'data', name));
+for (const name of ['index.html', 'game.css', 'game.js', 'questions.js', 'storage.js'])
+  fs.copyFileSync(path.join(root, 'number-rush', name), path.join(output, 'number-rush', name));
+for (const name of ['offline.html', 'offline.css', 'offline.js', 'service-worker.js'])
+  fs.copyFileSync(path.join(root, name), path.join(output, name));
 fs.writeFileSync(path.join(output, 'api-config.js'), `window.JPEDIA_CONFIG = Object.freeze({ API_BASE_URL: ${JSON.stringify(apiBase.replace(/\/$/, ''))} });\n`);
 const canonicalHost = 'https://www.setbget.in';
 const publicRoutes = ['/', '/jobs', '/communities', '/faqs', '/boards', '/services', '/services/preparation', '/services/eligibility', '/privacy', '/terms', '/about', '/contact'];

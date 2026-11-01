@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f5f2" />
+    <meta name="robots" content="noindex,follow" />
+    <meta
+      name="description"
+      content="A quick offline-friendly math arcade game from SetBGet."
+    />
+    <title>Number Rush · SetBGet</title>
+    <link rel="stylesheet" href="/number-rush/game.css" />
+    <script defer src="/number-rush/questions.js"></script>
+    <script defer src="/number-rush/storage.js"></script>
+    <script defer src="/number-rush/game.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a class="wordmark" href="/" aria-label="SetBGet home"
+          ><span class="mark">S</span><span>SetBGet</span></a
+        >
+        <div class="game-brand">
+          <span class="live-dot"></span> NUMBER RUSH
+          <span id="network" class="network">READY OFFLINE</span>
+        </div>
+        <button
+          class="icon-button"
+          id="exit"
+          type="button"
+          aria-label="Return to SetBGet"
+        >
+          ↗
+        </button>
+      </header>
+      <section id="welcome" class="welcome">
+        <div class="eyebrow">THE 30-SECOND CHALLENGE</div>
+        <h1>Think fast.<br /><em>Stay sharp.</em></h1>
+        <p>
+          Four choices. One right answer. How many can you clear before the
+          clock runs out?
+        </p>
+        <div class="welcome-meta">
+          <span>⌁ &nbsp; 30 seconds</span><span>↗ &nbsp; Combo scoring</span
+          ><span>⌨ &nbsp; Keys 1–4</span>
+        </div>
+        <button id="start" class="primary">
+          Start your run <span>→</span>
+        </button>
+        <div class="best-line">
+          PERSONAL BEST <strong id="welcomeBest">0</strong>
+        </div>
+      </section>
+      <section id="game" class="game" hidden>
+        <div class="stats">
+          <div class="stat clock-stat">
+            <span>TIME</span><strong id="time">30.0</strong>
+            <div class="track"><i id="progress"></i></div>
+          </div>
+          <div class="stat">
+            <span>SCORE</span><strong id="score">000</strong>
+          </div>
+          <div class="stat">
+            <span>COMBO</span><strong id="combo">—</strong>
+          </div>
+          <div class="stat">
+            <span>LEVEL</span><strong id="level">01 <small>easy</small></strong>
+          </div>
+          <div class="stat best-stat">
+            <span>BEST</span><strong id="best">000</strong>
+          </div>
+        </div>
+        <div class="playfield">
+          <div class="question-meta">
+            <span id="questionCount">QUESTION 01</span
+            ><span id="feedback" aria-live="polite">CHOOSE THE ANSWER</span>
+          </div>
+          <div id="equation" class="equation" aria-live="polite">
+            8 <span>+</span> 5 <b>=</b> ?
+          </div>
+          <div id="answers" class="answers"></div>
+          <div class="controls">
+            <span
+              >PRESS <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> TO
+              ANSWER</span
+            ><button id="pause" type="button">
+              Ⅱ &nbsp; Pause <kbd>ESC</kbd>
+            </button>
+          </div>
+          <div id="pauseOverlay" class="pause-overlay" hidden>
+            <div>
+              <span>TAKE A BREATH</span>
+              <h2>Run paused</h2>
+              <button id="resume" class="primary">Keep going →</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="result" class="result" hidden>
+        <div class="eyebrow">RUN COMPLETE</div>
+        <h1 id="resultTitle">Nice run.</h1>
+        <div class="final-score">
+          <strong id="finalScore">0</strong><span>POINTS</span>
+        </div>
+        <div class="result-stats">
+          <div><span>ACCURACY</span><strong id="accuracy">0%</strong></div>
+          <div><span>CORRECT</span><strong id="correct">0</strong></div>
+          <div><span>BEST COMBO</span><strong id="highCombo">0×</strong></div>
+        </div>
+        <p id="newBest" class="new-best" hidden>✦ &nbsp; NEW PERSONAL BEST</p>
+        <button id="again" class="primary">Play again <span>→</span></button
+        ><a class="return-link" href="/">Return to SetBGet</a>
+      </section>
+      <footer>
+        <span>BUILT FOR THE IN-BETWEEN</span
+        ><span>NO SIGNAL NEEDED <i>●</i></span>
+      </footer>
+    </main>
+  </body>
+</html>
