@@ -39,14 +39,14 @@
         </button>
       </header>
       <section id="welcome" class="welcome">
-        <div id="welcomeEyebrow" class="eyebrow">THE 30-SECOND CHALLENGE</div>
+        <div id="welcomeEyebrow" class="eyebrow">THE 60-SECOND CHALLENGE</div>
         <h1 id="welcomeHeading">Think fast. Stay sharp.</h1>
         <p>
           <span id="welcomeDescription">Four choices. One right answer. How many can you clear before time runs out?</span>
         </p>
         <div class="welcome-meta">
-          <span>⌁ &nbsp; 30 seconds</span><span>↗ &nbsp; Combo scoring</span
-          ><span>⌨ &nbsp; Keys 1–4</span>
+          <span>60 seconds to start</span><span>+3 sec correct</span
+          ><span>−2 sec incorrect</span>
         </div>
         <button id="start" class="primary">Start your run →</button>
         <div id="welcomeStatus" class="welcome-status">NUMBER RUSH</div>
@@ -57,17 +57,15 @@
       <section id="game" class="game" hidden>
         <div class="stats">
           <div class="stat clock-stat">
-            <span>TIME</span><strong id="time">30.0</strong>
+            <span>TIME LEFT</span><strong id="time">60.0</strong>
             <div class="track"><i id="progress"></i></div>
+            <span id="timeDelta" class="time-delta" aria-live="polite"></span>
           </div>
           <div class="stat">
             <span>SCORE</span><strong id="score">000</strong>
           </div>
           <div class="stat">
-            <span>COMBO</span><strong id="combo">—</strong>
-          </div>
-          <div class="stat">
-            <span>LEVEL</span><strong id="level">01 <small>easy</small></strong>
+            <span>LEVEL</span><strong id="level">01 <small>basic</small></strong>
           </div>
           <div class="stat best-stat">
             <span>BEST</span><strong id="best">000</strong>
@@ -80,6 +78,9 @@
           </div>
           <div id="equation" class="equation" aria-live="polite">
             8 <span>+</span> 5 <b>=</b> ?
+          </div>
+          <div id="levelToast" class="level-toast" aria-live="polite" hidden>
+            <span>LEVEL UP</span><strong id="levelToastTitle"></strong><p id="levelToastDescription"></p>
           </div>
           <div id="answers" class="answers"></div>
           <div class="controls">
@@ -100,15 +101,21 @@
         </div>
       </section>
       <section id="result" class="result" hidden>
-        <div class="eyebrow">RUN COMPLETE</div>
-        <h1 id="resultTitle">Nice run.</h1>
+        <div class="eyebrow">NUMBER RUSH — RESULTS</div>
+        <h1>Round complete</h1>
         <div class="final-score">
           <strong id="finalScore">0</strong><span>POINTS</span>
         </div>
-        <div class="result-stats">
-          <div><span>ACCURACY</span><strong id="accuracy">0%</strong></div>
+        <div class="result-stats" aria-label="Performance summary">
+          <div><span>TOTAL ANSWERED</span><strong id="totalAnswered">0</strong></div>
           <div><span>CORRECT</span><strong id="correct">0</strong></div>
-          <div><span>BEST COMBO</span><strong id="highCombo">0×</strong></div>
+          <div><span>INCORRECT</span><strong id="incorrect">0</strong></div>
+          <div><span>ACCURACY</span><strong id="accuracy">0%</strong></div>
+          <div><span>STARTING TIME</span><strong id="startingTime">60 sec</strong></div>
+          <div><span>TIME PLAYED</span><strong id="timePlayed">0 sec</strong></div>
+          <div><span>FINAL REMAINING</span><strong id="finalRemaining">0 sec</strong></div>
+          <div><span>HIGHEST LEVEL</span><strong id="highestLevel">Level 1</strong></div>
+          <div><span>PERSONAL BEST</span><strong id="personalBest">0</strong></div>
         </div>
         <p id="newBest" class="new-best" hidden>✦ &nbsp; NEW PERSONAL BEST</p>
         <button id="again" class="primary">Play again <span>→</span></button

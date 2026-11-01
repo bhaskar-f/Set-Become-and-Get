@@ -27,10 +27,14 @@ test('Vercel builds require an explicit public API URL and embed only that URL',
   assert.ok(fs.existsSync(path.join(root, 'public', 'service-worker.js')));
   assert.ok(fs.existsSync(path.join(root, 'public', 'offline.html')));
   assert.ok(fs.existsSync(path.join(root, 'public', 'logo.png')));
+  assert.ok(fs.existsSync(path.join(root, 'public', 'connectivity-check.txt')));
+  assert.equal(fs.readFileSync(path.join(root, 'public', 'connectivity-check.txt'), 'utf8').trim(), 'ok');
   for (const asset of ['index.html', 'game.css', 'game.js', 'questions.js', 'storage.js'])
     assert.ok(fs.existsSync(path.join(root, 'public', 'number-rush', asset)), `${asset} must ship with the game`);
   assert.match(fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8'), /offline-connectivity\.js/);
-  assert.match(fs.readFileSync(path.join(root, 'public', 'service-worker.js'), 'utf8'), /setbget-number-rush-v3/);
+  const worker = fs.readFileSync(path.join(root, 'public', 'service-worker.js'), 'utf8');
+  assert.match(worker, /setbget-number-rush-v4/);
+  assert.match(worker, /connectivity-check\.txt[\s\S]*cache: 'no-store'/);
   const builtHtml = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
   assert.match(builtHtml, /<img src="\/logo\.png" alt="setbget"/);
   assert.match(builtHtml, /services-menu-group[\s\S]*data-i18n="navigation\.brainGames"[\s\S]*href="\/number-rush\/"/);

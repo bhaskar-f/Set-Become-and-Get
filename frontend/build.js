@@ -35,6 +35,7 @@ for (const name of ['index.html', 'game.css', 'game.js', 'questions.js', 'storag
   fs.copyFileSync(path.join(root, 'number-rush', name), path.join(output, 'number-rush', name));
 for (const name of ['offline.html', 'offline.css', 'offline.js', 'service-worker.js'])
   fs.copyFileSync(path.join(root, name), path.join(output, name));
+fs.copyFileSync(path.join(root, 'connectivity-check.txt'), path.join(output, 'connectivity-check.txt'));
 fs.writeFileSync(path.join(output, 'api-config.js'), `window.JPEDIA_CONFIG = Object.freeze({ API_BASE_URL: ${JSON.stringify(apiBase.replace(/\/$/, ''))} });\n`);
 const canonicalHost = 'https://www.setbget.in';
 const publicRoutes = ['/', '/jobs', '/communities', '/faqs', '/boards', '/services', '/services/preparation', '/services/eligibility', '/privacy', '/terms', '/about', '/contact'];
