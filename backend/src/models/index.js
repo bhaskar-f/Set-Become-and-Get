@@ -4,32 +4,35 @@ const { Schema } = mongoose;
 const schema = (definition, options = {}) => new Schema(definition, { timestamps: true, ...options });
 const ref = (model, required = true) => ({ type: Schema.Types.ObjectId, ref: model, required });
 const resourceRef = { type: Schema.Types.ObjectId, ref: 'Resource' };
+const translationId = { type: String, match: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i };
 
-const dateEntry = new Schema({ event: String, date: Date, description: String }, { _id: false });
-const vacancyEntry = new Schema({ post: String, vacancyCount: Number, notes: String }, { _id: false });
-const categoryVacancy = new Schema({ category: String, vacancyCount: Number, notes: String }, { _id: false });
-const ageRelaxation = new Schema({ category: String, relaxation: String, notes: String }, { _id: false });
-const feeEntry = new Schema({ category: String, fee: String, notes: String }, { _id: false });
-const qualificationEntry = new Schema({ name: String, field: String, condition: { type: String, enum: ['ALL','ANY_ONE','OPTIONAL'] }, additionalRequirement: String, minimumMarks: String, notes: String }, { _id: false });
-const experienceEntry = new Schema({ minimumExperience: String, domain: String, description: String }, { _id: false });
+const dateEntry = new Schema({ translationId, event: String, date: Date, description: String }, { _id: false });
+const vacancyEntry = new Schema({ translationId, post: String, vacancyCount: Number, notes: String }, { _id: false });
+const categoryVacancy = new Schema({ translationId, category: String, vacancyCount: Number, notes: String }, { _id: false });
+const ageRelaxation = new Schema({ translationId, category: String, relaxation: String, notes: String }, { _id: false });
+const feeEntry = new Schema({ translationId, category: String, fee: String, notes: String }, { _id: false });
+const qualificationEntry = new Schema({ translationId, name: String, field: String, condition: { type: String, enum: ['ALL','ANY_ONE','OPTIONAL'] }, additionalRequirement: String, minimumMarks: String, notes: String }, { _id: false });
+const experienceEntry = new Schema({ translationId, minimumExperience: String, domain: String, description: String }, { _id: false });
 const selectionComponent = new Schema({ name: String, maximumMarks: Number, qualifyingMarks: Number, qualifyingPercentage: Number, qualifyingOnly: Boolean }, { _id: false });
-const selectionStage = new Schema({ name: String, description: String, maximumMarks: Number, qualifyingMarks: Number, qualifyingPercentage: Number, duration: String, weightage: String, components: [selectionComponent] }, { _id: false });
+const selectionStage = new Schema({ translationId, name: String, description: String, maximumMarks: Number, qualifyingMarks: Number, qualifyingPercentage: Number, duration: String, weightage: String, components: [selectionComponent] }, { _id: false });
 const salaryInfo = new Schema({ payLevel: String, payScale: String, gradePay: String, minimum: String, maximum: String, description: String }, { _id: false });
-const importantLink = new Schema({ label: String, url: String, description: String }, { _id: false });
+const importantLink = new Schema({ translationId, label: String, url: String, description: String }, { _id: false });
 const contentBlock = new Schema({ type: { type: String, enum: ['paragraph','heading','bulletList','numberedList','steps','table','keyValueList','callout','link','externalLink','youtube','image','divider'] }, data: Schema.Types.Mixed }, { _id: false });
 const contentSection = new Schema({ title: { type: String, maxlength: 160 }, blocks: [contentBlock] }, { _id: false });
 const conditionalEntry = new Schema({ postId: { type: Schema.Types.ObjectId }, category: String, value: String }, { _id: false });
 const conditionalField = new Schema({ field: { type: String, enum: ['vacancyCount','qualification','ageLimit','salary','applicationFee','location','experience','selectionProcess'] }, mode: { type: String, enum: ['COMMON','VARIES'] }, entries: [conditionalEntry] }, { _id: false });
-const translatedDateEntry = new Schema({ description: String }, { _id: false });
-const translatedNotesEntry = new Schema({ notes: String }, { _id: false });
-const translatedQualificationEntry = new Schema({ additionalRequirement: String, notes: String }, { _id: false });
-const translatedExperienceEntry = new Schema({ description: String }, { _id: false });
-const translatedSelectionStage = new Schema({ description: String }, { _id: false });
+const translatedDateEntry = new Schema({ translationId, description: String }, { _id: false });
+const translatedNotesEntry = new Schema({ translationId, notes: String }, { _id: false });
+const translatedQualificationEntry = new Schema({ translationId, additionalRequirement: String, notes: String }, { _id: false });
+const translatedExperienceEntry = new Schema({ translationId, description: String }, { _id: false });
+const translatedSelectionStage = new Schema({ translationId, description: String }, { _id: false });
 const translatedSalaryInfo = new Schema({ description: String }, { _id: false });
-const translatedImportantLink = new Schema({ description: String }, { _id: false });
-const translatedDocument = new Schema({ description: String }, { _id: false });
-const translatedInstruction = new Schema({ text: String }, { _id: false });
+const translatedImportantLink = new Schema({ translationId, description: String }, { _id: false });
+const translatedDocument = new Schema({ translationId, description: String }, { _id: false });
+const translatedInstruction = new Schema({ translationId, text: String }, { _id: false });
+const translatedTextEntry = new Schema({ translationId, text: String }, { _id: false });
 const translatedRecruitmentPost = new Schema({
+  translationId,
   ageDescription: String,
   categoryVacancyBreakdown: { type: [translatedNotesEntry], default: undefined },
   qualifications: { type: [translatedQualificationEntry], default: undefined },
@@ -43,7 +46,7 @@ const translatedJobContent = new Schema({
   qualification: String,
   ageRelaxation: String,
   ageDescription: String,
-  selectionProcess: { type: [String], default: undefined },
+  selectionProcess: { type: [translatedTextEntry], default: undefined },
   importantDates: { type: [translatedDateEntry], default: undefined },
   vacancyBreakdown: { type: [translatedNotesEntry], default: undefined },
   ageRelaxations: { type: [translatedNotesEntry], default: undefined },
@@ -52,7 +55,7 @@ const translatedJobContent = new Schema({
   experienceRequirements: { type: [translatedExperienceEntry], default: undefined },
   selectionStages: { type: [translatedSelectionStage], default: undefined },
   salaryInfo: translatedSalaryInfo,
-  howToApplySteps: { type: [String], default: undefined },
+  howToApplySteps: { type: [translatedTextEntry], default: undefined },
   importantLinks: { type: [translatedImportantLink], default: undefined },
   documentsRequired: { type: [translatedDocument], default: undefined },
   importantInstructions: { type: [translatedInstruction], default: undefined },
@@ -65,12 +68,13 @@ const contentTranslations = new Schema({
   bn: { type: translatedJobContent },
 }, { _id: false, strict: 'throw' });
 const recruitmentPost = new Schema({
+  translationId,
   name: String, code: String, groupName: String, vacancyCount: Number,
   categoryVacancyBreakdown: [categoryVacancy], ageMin: Number, ageMax: Number, ageCutoffDate: Date, ageDescription: String,
   qualifications: [qualificationEntry], experienceRequirements: [experienceEntry], mandatoryCertifications: [String], preferredCertifications: [String],
   minimumMarks: String, salary: salaryInfo, selectionRequirements: [String], additionalRequirements: String, postSpecificNotes: String,
 }, { _id: true });
-const postGroup = new Schema({ name: String, description: String, totalVacancies: Number }, { _id: false });
+const postGroup = new Schema({ translationId, name: String, description: String, totalVacancies: Number }, { _id: false });
 
 const User = mongoose.model('User', schema({
   name: { type: String, required: true, trim: true, maxlength: 100 }, email: { type: String, lowercase: true, trim: true },
@@ -94,8 +98,9 @@ const Job = mongoose.model('Job', schema({
   importantDates: [dateEntry], vacancyBreakdown: [vacancyEntry], ageCutoffDate: Date, ageDescription: String,
   ageRelaxations: [ageRelaxation], applicationFees: [feeEntry], qualifications: [qualificationEntry],
   selectionStages: [selectionStage], salaryInfo, howToApplySteps: [String], importantLinks: [importantLink],
-  contentDocument: [Schema.Types.Mixed], contentBlocks: [contentBlock], contentSections: [contentSection], conditionalFields: [conditionalField], documentsRequired: [{ name: String, description: String, required: Boolean }],
-  importantInstructions: [{ text: String, category: String }], posts: [recruitmentPost], postGroups: [postGroup],
+  contentDocument: [Schema.Types.Mixed], contentBlocks: [contentBlock], contentSections: [contentSection], conditionalFields: [conditionalField], documentsRequired: [{ translationId, name: String, description: String, required: Boolean }],
+  importantInstructions: [{ translationId, text: String, category: String }], posts: [recruitmentPost], postGroups: [postGroup],
+  selectionProcessTranslationIds: { type: [String], default: undefined }, howToApplyStepTranslationIds: { type: [String], default: undefined },
   contentTranslations: { type: contentTranslations, default: undefined },
   source: ref('RecruitmentSource', false), sourceUrl: String, sourceExternalId: String, status: { type: String, enum: JOB_STATUSES, default: 'DRAFT' }, verificationStatus: { type: String, enum: ['UNVERIFIED','PENDING','VERIFIED','REJECTED'], default: 'UNVERIFIED' },
   author: ref('User', false), reviewedBy: ref('User', false), reviewedAt: Date, publishedBy: ref('User', false), publishedAt: Date, rejectionReason: String, rawSourceReference: String

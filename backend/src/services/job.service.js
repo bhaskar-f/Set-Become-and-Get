@@ -1,5 +1,6 @@
 const { Job, Board, AuditLog } = require('../models');
 const mongoose = require('mongoose');
+const { randomUUID } = require('node:crypto');
 const { pagination, pageMeta } = require('../utils/pagination');
 const { AppError } = require('../utils/http');
 const { slugify } = require('./source.service');
@@ -63,6 +64,100 @@ function mergeContentTranslations(current, updates) {
     merged[locale] = { ...(currentValues[locale] || {}), ...values };
   }
   return merged;
+}
+const REPEATER_FIELDS = {
+  importantDates: 'importantDates', vacancyBreakdown: 'vacancyBreakdown', ageRelaxations: 'ageRelaxations',
+  applicationFees: 'applicationFees', qualifications: 'qualifications', experienceRequirements: 'experienceRequirements',
+  selectionStages: 'selectionStages', importantLinks: 'importantLinks', documentsRequired: 'documentsRequired',
+  importantInstructions: 'importantInstructions', posts: 'posts', postGroups: 'postGroups',
+};
+const POST_REPEATER_FIELDS = ['categoryVacancyBreakdown', 'qualifications', 'experienceRequirements'];
+const makeTranslationId = () => randomUUID();
+function sourceTranslationIds(job, field) {
+  if (field === 'selectionProcess') return job.selectionProcessTranslationIds || [];
+  if (field === 'howToApplySteps') return job.howToApplyStepTranslationIds || [];
+  return (job[field] || []).map(item => item?.translationId);
+}
+function ensureSourceTranslationIds(job, previous = {}) {
+  const next = job;
+  const ensureObjectRows = field => {
+    if (!Array.isArray(next[field])) return;
+    next[field] = next[field].map((row, index) => ({
+      ...row,
+      translationId: row.translationId || previous[field]?.[index]?.translationId || makeTranslationId(),
+    }));
+  };
+  for (const field of Object.keys(REPEATER_FIELDS)) ensureObjectRows(field);
+  for (const [field, idsField] of [['selectionProcess', 'selectionProcessTranslationIds'], ['howToApplySteps', 'howToApplyStepTranslationIds']]) {
+    if (!Array.isArray(next[field])) continue;
+    const supplied = next[idsField];
+    next[idsField] = next[field].map((_, index) => supplied?.[index] || previous[idsField]?.[index] || makeTranslationId());
+  }
+  if (Array.isArray(next.posts)) next.posts = next.posts.map((post, postIndex) => {
+    const oldPost = previous.posts?.find(item => item.translationId && item.translationId === post.translationId) || previous.posts?.[postIndex];
+    const updated = { ...post, translationId: post.translationId || oldPost?.translationId || makeTranslationId() };
+    for (const field of POST_REPEATER_FIELDS) if (Array.isArray(updated[field])) updated[field] = updated[field].map((row, index) => ({
+      ...row,
+      translationId: row.translationId || oldPost?.[field]?.[index]?.translationId || makeTranslationId(),
+    }));
+    return updated;
+  });
+  return next;
+}
+function normalizeTranslationRows(localeValues = {}, job = {}) {
+  const result = { ...localeValues };
+  for (const [sourceField, translationField] of Object.entries(REPEATER_FIELDS)) {
+    const source = job[sourceField] || [];
+    const values = localeValues[translationField];
+    if (!Array.isArray(values)) continue;
+    const byId = new Map(values.filter(item => item && typeof item === 'object' && item.translationId).map(item => [item.translationId, item]));
+    result[translationField] = source.map((item, index) => {
+      const previous = byId.get(item.translationId) || values[index];
+      return previous && typeof previous === 'object'
+        ? { ...previous, translationId: item.translationId }
+        : { translationId: item.translationId };
+    });
+  }
+  for (const [sourceField, idsField, translationField] of [
+    ['selectionProcess', 'selectionProcessTranslationIds', 'selectionProcess'],
+    ['howToApplySteps', 'howToApplyStepTranslationIds', 'howToApplySteps'],
+  ]) {
+    const values = localeValues[translationField];
+    if (!Array.isArray(values)) continue;
+    const ids = sourceTranslationIds(job, sourceField);
+    const byId = new Map(values.filter(item => item && typeof item === 'object' && item.translationId).map(item => [item.translationId, item.text]));
+    result[translationField] = (job[sourceField] || []).map((_, index) => ({
+      translationId: ids[index],
+      text: byId.has(ids[index]) ? byId.get(ids[index]) : typeof values[index] === 'string' ? values[index] : values[index]?.text || '',
+    }));
+    if (!ids.length) delete result[translationField];
+  }
+  if (Array.isArray(job.posts) && Array.isArray(localeValues.posts)) {
+    const oldPostRows = localeValues.posts;
+    result.posts = job.posts.map((post, postIndex) => {
+      const previous = oldPostRows.find(item => item?.translationId && item.translationId === post.translationId) || oldPostRows[postIndex] || {};
+      const translated = { ...previous, translationId: post.translationId };
+      for (const field of POST_REPEATER_FIELDS) {
+        const sourceRows = post[field] || [];
+        const translatedRows = previous[field] || [];
+        const byId = new Map(translatedRows.filter(item => item?.translationId).map(item => [item.translationId, item]));
+        if (translatedRows.length || sourceRows.some(item => item.translationId)) translated[field] = sourceRows.map((item, index) => ({
+          ...(byId.get(item.translationId) || translatedRows[index] || {}),
+          translationId: item.translationId,
+        }));
+      }
+      return translated;
+    });
+  }
+  return result;
+}
+function normalizeJobTranslationIdentity(job, previous = {}) {
+  ensureSourceTranslationIds(job, previous);
+  if (job.contentTranslations) {
+    const current = typeof job.contentTranslations.toObject === 'function' ? job.contentTranslations.toObject() : job.contentTranslations;
+    job.contentTranslations = Object.fromEntries(Object.entries(current).map(([locale, values]) => [locale, normalizeTranslationRows(values, job)]));
+  }
+  return job;
 }
 async function create(input, user) {
   const postIds = new Set((input.posts || []).map(post => String(post._id || '')).filter(Boolean));

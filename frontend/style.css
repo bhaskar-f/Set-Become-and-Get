@@ -163,6 +163,7 @@ body:not(.admin-shell) button {
   background: #fff;
   color: #111;
   font: 14px var(--font-button);
+  margin-right: 10px;
 }
 body.admin-shell .locale-selector-label,
 body.user-workspace-route .locale-selector-label { display: none !important; }

@@ -25,6 +25,10 @@
     if (text !== undefined) n.textContent = text;
     return n;
   };
+  const newTranslationId = () => window.crypto?.randomUUID?.() || "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, character => {
+    const random = Math.random() * 16 | 0;
+    return (character === "x" ? random : (random & 3) | 8).toString(16);
+  });
   const button = (label, action, cls = "") => {
     const b = el("button", `admin-button ${cls}`, label);
     b.type = "button";
@@ -1251,7 +1255,6 @@
       ["qualification", "Qualification / eligibility prose", "textarea", "qualification"],
       ["ageRelaxation", "Age-relaxation explanation", "textarea", "ageRelaxation"],
       ["ageDescription", "Age-limit explanation", "textarea", "ageDescription"],
-      ["selectionProcess", "Selection-process text (one translated line per English line)", "textarea", "selectionProcess"],
       ["salaryInfo.description", "Salary explanation", "textarea", "salaryDescription"],
     ];
     for (const [locale, language] of [["hi", "Hindi (hi)"], ["bn", "Bengali (bn)"]]) {
@@ -1271,13 +1274,24 @@
     return section;
   }
   function withContentTranslationRows(items, job, path, map = value => value || {}) {
-    return (items || []).map((item, index) => ({
-      ...item,
-      _contentTranslations: Object.fromEntries(["hi", "bn"].map(locale => [
-        locale,
-        map(job.contentTranslations?.[locale]?.[path]?.[index]),
-      ])),
-    }));
+    const sourceItems = items || [];
+    return sourceItems.map((item, index) => {
+      const translationId = item.translationId || (path === "selectionProcess"
+        ? job.selectionProcessTranslationIds?.[index]
+        : path === "howToApplySteps"
+          ? job.howToApplyStepTranslationIds?.[index]
+          : undefined) || newTranslationId();
+      return {
+        ...item,
+        translationId,
+        _contentTranslations: Object.fromEntries(["hi", "bn"].map(locale => {
+          const rows = job.contentTranslations?.[locale]?.[path] || [];
+          const match = rows.find?.(row => row && typeof row === "object" && row.translationId === translationId);
+          const previous = match || rows[index];
+          return [locale, map(previous)];
+        })),
+      };
+    });
   }
   function multi(form, label, name, options, selected = [], requiredType) {
     const wrap = el("label", "admin-field");
@@ -2013,6 +2027,13 @@
       const row = el("div", "admin-repeat-row");
       row.dataset.repeatRow = "";
       if (Number.isInteger(originalIndex)) row.dataset.originalIndex = String(originalIndex);
+      if (translationFields.length || key === "posts") {
+        const translationIdInput = el("input");
+        translationIdInput.type = "hidden";
+        translationIdInput.dataset.repeatField = "translationId";
+        translationIdInput.value = item.translationId || newTranslationId();
+        row.append(translationIdInput);
+      }
       if (key === "posts" && item._id) {
         const idInput = el("input");
         idInput.type = "hidden";
@@ -2433,7 +2454,7 @@
   function readRepeater(form, key) {
     return readRepeaterEntries(form, key)
       .map(entry => entry.source)
-      .filter(row => Object.keys(row).length);
+      .filter(row => Object.keys(row).some(name => name !== "translationId"));
   }
   function cloneTranslationData(value) {
     return value && typeof value === "object"
@@ -2468,24 +2489,12 @@
           if (value) translated.salaryInfo.description = value;
           else delete translated.salaryInfo.description;
           if (!Object.keys(translated.salaryInfo).length) delete translated.salaryInfo;
-        } else if (path === "selectionProcess") {
-          const sourceLines = payload.selectionProcess || [];
-          const translatedValues = translatedLines(value);
-          const merged = [...(translated.selectionProcess || [])];
-          for (let index = 0; index < sourceLines.length; index++) {
-            const line = translatedValues[index] || "";
-            if (line && !String(sourceLines[index] || "").trim())
-              throw Error(`Selection-process translation line ${index + 1} needs English source text.`);
-            if (line) merged[index] = line;
-            else if (value) merged[index] = "";
-          }
-          if (value) translated.selectionProcess = merged;
-          else delete translated.selectionProcess;
         } else if (value) translated[path] = value;
         else delete translated[path];
       }
 
       const repeaterTranslations = {
+        selectionProcess: ["step"],
         importantDates: ["description"],
         vacancyBreakdown: ["notes"],
         ageRelaxations: ["notes"],
@@ -2503,10 +2512,11 @@
         if (!entries.length) continue;
         const baseRows = translated[key] || [];
         const rows = entries.map(entry => {
-          const previous = entry.originalIndex == null ? undefined : baseRows[entry.originalIndex];
-          const row = key === "howToApplySteps"
-            ? { text: previous || "" }
-            : { ...(previous || {}) };
+          const previous = baseRows.find?.(item => item && typeof item === "object" && item.translationId === entry.source.translationId)
+            || (entry.originalIndex == null ? undefined : baseRows[entry.originalIndex]);
+          const row = key === "howToApplySteps" || key === "selectionProcess"
+            ? { translationId: entry.source.translationId, text: typeof previous === "string" ? previous : previous?.text || "" }
+            : { ...(previous || {}), translationId: entry.source.translationId };
           for (const field of translatedFields) {
             const value = entry.translations[locale][field] || "";
             const sourceField = field === "step" ? entry.source.step : entry.source[field];
@@ -2517,12 +2527,10 @@
           }
           return row;
         });
-        if (key === "howToApplySteps") {
-          translated[key] = rows.map(row => row.text || "");
-        } else translated[key] = rows;
+        translated[key] = rows;
       }
 
-      const postEntries = readRepeaterEntries(form, "posts").filter(entry => Object.keys(entry.source).length);
+      const postEntries = readRepeaterEntries(form, "posts").filter(entry => Object.keys(entry.source).some(name => name !== "translationId"));
       if (postEntries.length) {
         const baseRows = translated.posts || [];
         translated.posts = postEntries.map((entry, postIndex) => {
@@ -2883,11 +2891,11 @@
       if (values[key]?.trim()) payload[key] = values[key].trim();
     payload.board = values.board || "";
     payload.tags = splitList(values.tags);
-    payload.selectionProcess = splitList(values.selectionProcess);
     payload.categoryEligibility = splitList(values.categoryEligibility);
     for (const key of ["vacancyCount", "ageMin", "ageMax"])
       if (values[key] !== "") payload[key] = Number(values[key]);
     for (const key of [
+      "selectionProcess",
       "applicationStartDate",
       "applicationDeadline",
       "examDate",
@@ -2944,9 +2952,12 @@
       ...stage,
       components: splitList(stage.components || "").map((name) => ({ name })),
     }));
-    payload.howToApplySteps = payload.howToApplySteps
-      .map((row) => row.step)
-      .filter(Boolean);
+    payload.selectionProcess = payload.selectionProcess.filter(row => row.step?.trim());
+    payload.selectionProcessTranslationIds = payload.selectionProcess.map(row => row.translationId);
+    payload.selectionProcess = payload.selectionProcess.map(row => row.step);
+    payload.howToApplySteps = payload.howToApplySteps.filter(row => row.step?.trim());
+    payload.howToApplyStepTranslationIds = payload.howToApplySteps.map(row => row.translationId);
+    payload.howToApplySteps = payload.howToApplySteps.map(row => row.step);
     payload.documentsRequired = payload.documentsRequired.map((row) => ({
       ...row,
       required: row.required !== "false",
@@ -3595,14 +3606,6 @@
       field(form, "Salary", "salary", "text", job.salary || "");
       field(
         form,
-        "Selection process (one per line)",
-        "selectionProcess",
-        "textarea",
-        (job.selectionProcess || []).join("\n"),
-        { rows: 3 },
-      );
-      field(
-        form,
         "Application fee (text or JSON)",
         "applicationFee",
         "text",
@@ -3835,10 +3838,21 @@
       );
       addRepeater(
         form,
+        "Selection Process",
+        "selectionProcess",
+        [["step", "Stage or explanatory line", "textarea"]],
+        withContentTranslationRows((job.selectionProcess || []).map((step, index) => ({
+          step,
+          translationId: job.selectionProcessTranslationIds?.[index],
+        })), job, "selectionProcess", value => typeof value === "string" ? value : value?.text || ""),
+        [{ key: "step", label: "Selection-process explanation" }],
+      );
+      addRepeater(
+        form,
         "How to Apply Steps",
         "howToApplySteps",
         [["step", "Step", "textarea"]],
-        withContentTranslationRows((job.howToApplySteps || []).map(step => ({ step })), job, "howToApplySteps", value => ({ step: value || "" })),
+        withContentTranslationRows((job.howToApplySteps || []).map((step, index) => ({ step, translationId: job.howToApplyStepTranslationIds?.[index] })), job, "howToApplySteps", value => ({ step: typeof value === "string" ? value : value?.text || "" })),
         [{ key: "step", label: "Application step" }],
       );
       addRepeater(
