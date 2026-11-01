@@ -224,9 +224,9 @@
     $("newBest").hidden = !isBest;
     show("result");
     ui.welcomeBest.textContent = formatScore(best);
-    if (restoreAfterRound && navigator.onLine) {
+    if (restoreAfterRound && !connectivityUnavailable) {
       restoreTimer = setTimeout(() => {
-        if (state === "over" && navigator.onLine) location.replace(restoreAfterRound);
+        if (state === "over" && !connectivityUnavailable) location.replace(restoreAfterRound);
       }, 2200);
     }
   }

@@ -1,5 +1,5 @@
 /* Number Rush shell cache. Keep the cache list limited to public static game assets. */
-const CACHE = 'setbget-number-rush-v4';
+const CACHE = 'setbget-number-rush-v5';
 const ASSETS = ['/offline.html','/offline.css','/offline.js','/offline-connectivity.js','/logo.png','/number-rush/','/number-rush/index.html','/number-rush/game.css','/number-rush/game.js','/number-rush/questions.js','/number-rush/storage.js'];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('setbget-number-rush-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())); });

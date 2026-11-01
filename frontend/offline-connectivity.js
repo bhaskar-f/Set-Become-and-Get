@@ -4,9 +4,10 @@
   const OFFLINE_ENTRY_KEY = "setbget:number-rush:offline-entry";
   const GAME_PATH = "/number-rush";
   const CHECK_PATH = "/connectivity-check.txt";
-  const CHECK_INTERVAL_MS = 7_000;
-  const CHECK_TIMEOUT_MS = 3_000;
+  const CHECK_INTERVAL_MS = 5_000;
+  const CHECK_TIMEOUT_MS = 2_500;
   const FAILURES_TO_OFFLINE = 2;
+  const SUCCESSES_TO_RESTORE = 2;
   const isGamePath = pathname => pathname === GAME_PATH || pathname.startsWith(`${GAME_PATH}/`);
   const isGame = () => isGamePath(location.pathname);
   const safeStore = {
@@ -28,12 +29,15 @@
   let pageActive = true;
   let unavailable = isGame() && (Boolean(checkedReturnUrl(safeStore.get())) || !navigator.onLine);
   let redirecting = false;
-  let checking = false;
   let retryingRecovery = false;
   let consecutiveFailures = 0;
+  let consecutiveSuccesses = 0;
   let monitorId = 0;
   let pageGeneration = 0;
   let currentController = null;
+  let cancelCurrentProbe = null;
+  let currentProbe = null;
+  let probeQueued = false;
   if (isGame() && safeStore.get() && !checkedReturnUrl(safeStore.get())) safeStore.clear();
 
   let registrationReady = Promise.resolve(false);
@@ -62,6 +66,7 @@
   async function declareUnavailable() {
     if (unavailable || !pageActive) return;
     unavailable = true;
+    consecutiveSuccesses = 0;
     if (isGame()) {
       if (typeof window.NumberRushHandleConnectivityLost === "function") window.NumberRushHandleConnectivityLost();
       return;
@@ -88,37 +93,90 @@
     if (!shouldDefer && target) location.replace(target.href);
   }
 
-  async function checkConnectivity() {
-    if (!pageActive || checking || document.visibilityState !== "visible") return null;
-    checking = true;
+  async function performProbe() {
+    if (!pageActive || document.visibilityState !== "visible") return null;
     const generation = pageGeneration;
     const controller = new AbortController();
     currentController = controller;
-    const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
+    let rejectCancellation;
+    const cancelled = new Promise((_, reject) => { rejectCancellation = reject; });
+    cancelCurrentProbe = () => {
+      controller.abort();
+      rejectCancellation(new Error("Connectivity probe cancelled."));
+    };
+    let timeoutId;
+    const timeout = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        controller.abort();
+        reject(new Error("Connectivity probe timed out."));
+      }, CHECK_TIMEOUT_MS);
+    });
+
     try {
       const url = new URL(CHECK_PATH, location.origin);
       url.searchParams.set("_", String(Date.now()));
-      const response = await fetch(url.href, {
-        method: "GET",
-        cache: "no-store",
-        credentials: "omit",
-        signal: controller.signal,
-      });
+      const response = await Promise.race([
+        fetch(url.href, {
+          method: "GET",
+          mode: "same-origin",
+          redirect: "error",
+          cache: "no-store",
+          credentials: "omit",
+          signal: controller.signal,
+        }),
+        timeout,
+        cancelled,
+      ]);
       if (!pageActive || generation !== pageGeneration) return null;
-      if (!response.ok) throw new Error(`Connectivity check returned ${response.status}.`);
+      if (!response.ok || response.status !== 200) throw new Error(`Connectivity probe returned HTTP ${response.status}.`);
+      const body = await Promise.race([response.text(), timeout, cancelled]);
+      if (!pageActive || generation !== pageGeneration) return null;
+      if (body.trim() !== "ok") throw new Error("Connectivity probe returned an unexpected body.");
+
       consecutiveFailures = 0;
-      handleReachable();
+      if (unavailable) {
+        consecutiveSuccesses++;
+        if (consecutiveSuccesses >= SUCCESSES_TO_RESTORE) {
+          consecutiveSuccesses = 0;
+          handleReachable();
+        }
+      } else {
+        consecutiveSuccesses = 0;
+      }
       return true;
     } catch (_) {
       if (!pageActive || generation !== pageGeneration) return null;
+      consecutiveSuccesses = 0;
       consecutiveFailures++;
       if (consecutiveFailures >= FAILURES_TO_OFFLINE) await declareUnavailable();
       return false;
     } finally {
-      clearTimeout(timeout);
+      clearTimeout(timeoutId);
       if (currentController === controller) currentController = null;
-      checking = false;
+      if (cancelCurrentProbe) cancelCurrentProbe = null;
     }
+  }
+
+  function checkConnectivity() {
+    if (currentProbe) {
+      probeQueued = true;
+      return currentProbe.then(() => {
+        if (!probeQueued || !pageActive || document.visibilityState !== "visible") return null;
+        probeQueued = false;
+        return checkConnectivity();
+      });
+    }
+    if (!pageActive || document.visibilityState !== "visible") return Promise.resolve(null);
+    const probe = performProbe();
+    currentProbe = probe.finally(() => {
+      if (currentProbe === wrappedProbe) currentProbe = null;
+      if (probeQueued && pageActive && document.visibilityState === "visible") {
+        probeQueued = false;
+        void checkConnectivity();
+      }
+    });
+    const wrappedProbe = currentProbe;
+    return wrappedProbe;
   }
 
   async function retryReachability() {
@@ -132,13 +190,15 @@
         const result = await checkConnectivity();
         if (result === true || !unavailable) return;
       }
-    } finally { retryingRecovery = false; }
+    } finally {
+      retryingRecovery = false;
+    }
   }
 
   async function onOffline() {
     const result = await checkConnectivity();
     if (result === false && consecutiveFailures < FAILURES_TO_OFFLINE) {
-      await new Promise(resolve => setTimeout(resolve, 850));
+      await new Promise(resolve => setTimeout(resolve, 300));
       await checkConnectivity();
     }
     return result;
@@ -150,21 +210,47 @@
     return currentCheck;
   }
 
+  function startMonitoring() {
+    if (!monitorId) monitorId = setInterval(() => {
+      if (document.visibilityState === "visible") void checkConnectivity();
+    }, CHECK_INTERVAL_MS);
+  }
+
+  function stopMonitoring() {
+    clearInterval(monitorId);
+    monitorId = 0;
+  }
+
+  function onVisibilityChange() {
+    if (document.visibilityState === "visible") {
+      pageGeneration++;
+      startMonitoring();
+      void checkConnectivity();
+      if (isGame() && unavailable) void retryReachability();
+    } else {
+      pageGeneration++;
+      stopMonitoring();
+      if (cancelCurrentProbe) cancelCurrentProbe();
+    }
+  }
+
   window.addEventListener("offline", onOffline);
   window.addEventListener("online", onOnline);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") void checkConnectivity();
-  });
+  document.addEventListener("visibilitychange", onVisibilityChange);
   window.addEventListener("pagehide", () => {
     pageActive = false;
     pageGeneration++;
-    clearInterval(monitorId);
-    if (currentController) currentController.abort();
-  }, { once: true });
-
-  monitorId = setInterval(() => {
+    stopMonitoring();
+    if (cancelCurrentProbe) cancelCurrentProbe();
+  });
+  window.addEventListener("pageshow", () => {
+    pageActive = true;
+    pageGeneration++;
+    startMonitoring();
     if (document.visibilityState === "visible") void checkConnectivity();
-  }, CHECK_INTERVAL_MS);
+  });
+
+  startMonitoring();
   if (document.visibilityState === "visible") void checkConnectivity();
 
   const savedOnThisPage = checkedReturnUrl(safeStore.get());

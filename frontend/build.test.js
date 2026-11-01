@@ -33,8 +33,10 @@ test('Vercel builds require an explicit public API URL and embed only that URL',
     assert.ok(fs.existsSync(path.join(root, 'public', 'number-rush', asset)), `${asset} must ship with the game`);
   assert.match(fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8'), /offline-connectivity\.js/);
   const worker = fs.readFileSync(path.join(root, 'public', 'service-worker.js'), 'utf8');
-  assert.match(worker, /setbget-number-rush-v4/);
+  assert.match(worker, /setbget-number-rush-v5/);
   assert.match(worker, /connectivity-check\.txt[\s\S]*cache: 'no-store'/);
+  assert.doesNotMatch(worker.match(/const ASSETS = \[(.*?)\];/)?.[1] || '', /connectivity-check\.txt/);
+  assert.match(worker, /url\.pathname === '\/connectivity-check\.txt'[\s\S]*event\.respondWith\(fetch\(request, \{ cache: 'no-store' \}\)\);\s*return;/);
   const builtHtml = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
   assert.match(builtHtml, /<img src="\/logo\.png" alt="setbget"/);
   assert.match(builtHtml, /services-menu-group[\s\S]*data-i18n="navigation\.brainGames"[\s\S]*href="\/number-rush\/"/);
