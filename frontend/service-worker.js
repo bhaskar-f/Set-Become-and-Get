@@ -1,5 +1,5 @@
 /* Number Rush shell cache. Keep the cache list limited to public static game assets. */
-const CACHE = 'setbget-number-rush-v5';
+const CACHE = 'setbget-number-rush-v6';
 const ASSETS = ['/offline.html','/offline.css','/offline.js','/offline-connectivity.js','/logo.png','/number-rush/','/number-rush/index.html','/number-rush/game.css','/number-rush/game.js','/number-rush/questions.js','/number-rush/storage.js'];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('setbget-number-rush-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())); });
@@ -16,10 +16,24 @@ self.addEventListener('fetch', event => {
       return await fallbackNavigation(url.pathname) || response;
     }).catch(async () => await fallbackNavigation(url.pathname) || Response.error())); return;
   }
-  if (/^\/number-rush(?:\/|$)/.test(url.pathname) || /^\/offline\.(?:html|css|js)$/.test(url.pathname) || url.pathname === '/offline-connectivity.js' || url.pathname === '/logo.png') {
-    event.respondWith(caches.match(request).then(cached => cached || fetch(request)));
+  if (url.pathname === '/offline-connectivity.js') {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' }).then(async response => {
+        if (response.ok) {
+          const cache = await caches.open(CACHE);
+          await cache.put(request, response.clone());
+        }
+        return response;
+      }).catch(async () => {
+        const cached = await caches.match(request);
+        return cached || Response.error();
+      })
+    );
+    return;
   }
-});
+  if (/^\\/number-rush(?:\\/|$)/.test(url.pathname) || /^\\/offline\\.(?:html|css|js)$/.test(url.pathname) || url.pathname === '/logo.png') {
+    event.respondWith(caches.match(request).then(cached => cached || fetch(request)));
+  }});
 
 async function fallbackNavigation(pathname) {
   const cache = await caches.open(CACHE);
