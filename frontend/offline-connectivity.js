@@ -4,10 +4,9 @@
   const OFFLINE_ENTRY_KEY = "setbget:number-rush:offline-entry";
   const GAME_PATH = "/number-rush";
   const CHECK_PATH = "/connectivity-check.txt";
-  const CHECK_INTERVAL_MS = 5_000;
   const CHECK_TIMEOUT_MS = 2_500;
   const FAILURES_TO_OFFLINE = 2;
-  const SUCCESSES_TO_RESTORE = 2;
+  const SUCCESSES_TO_RESTORE = 1;
   const isGamePath = pathname => pathname === GAME_PATH || pathname.startsWith(`${GAME_PATH}/`);
   const isGame = () => isGamePath(location.pathname);
   const safeStore = {
@@ -29,10 +28,8 @@
   let pageActive = true;
   let unavailable = isGame() && (Boolean(checkedReturnUrl(safeStore.get())) || !navigator.onLine);
   let redirecting = false;
-  let retryingRecovery = false;
   let consecutiveFailures = 0;
   let consecutiveSuccesses = 0;
-  let monitorId = 0;
   let pageGeneration = 0;
   let currentController = null;
   let cancelCurrentProbe = null;
@@ -179,79 +176,32 @@
     return wrappedProbe;
   }
 
-  async function retryReachability() {
-    if (retryingRecovery || !pageActive || !isGame()) return;
-    retryingRecovery = true;
-    const delays = [0, 700, 1_400, 2_800, 5_000, 5_000, 5_000, 5_000];
-    try {
-      for (const delay of delays) {
-        if (!pageActive || !isGame() || !unavailable) return;
-        if (delay) await new Promise(resolve => setTimeout(resolve, delay));
-        const result = await checkConnectivity();
-        if (result === true || !unavailable) return;
-      }
-    } finally {
-      retryingRecovery = false;
-    }
-  }
-
   async function onOffline() {
-    const result = await checkConnectivity();
-    if (result === false && consecutiveFailures < FAILURES_TO_OFFLINE) {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      await checkConnectivity();
-    }
-    return result;
+    consecutiveFailures = FAILURES_TO_OFFLINE;
+    consecutiveSuccesses = 0;
+    await declareUnavailable();
   }
 
   function onOnline() {
-    const currentCheck = checkConnectivity();
-    if (isGame() && unavailable) void retryReachability();
-    return currentCheck;
-  }
-
-  function startMonitoring() {
-    if (!monitorId) monitorId = setInterval(() => {
-      if (document.visibilityState === "visible") void checkConnectivity();
-    }, CHECK_INTERVAL_MS);
-  }
-
-  function stopMonitoring() {
-    clearInterval(monitorId);
-    monitorId = 0;
-  }
-
-  function onVisibilityChange() {
-    if (document.visibilityState === "visible") {
-      pageGeneration++;
-      startMonitoring();
-      void checkConnectivity();
-      if (isGame() && unavailable) void retryReachability();
-    } else {
-      pageGeneration++;
-      stopMonitoring();
-      if (cancelCurrentProbe) cancelCurrentProbe();
-    }
+    consecutiveFailures = 0;
+    consecutiveSuccesses = 0;
+    return checkConnectivity();
   }
 
   window.addEventListener("offline", onOffline);
   window.addEventListener("online", onOnline);
-  document.addEventListener("visibilitychange", onVisibilityChange);
   window.addEventListener("pagehide", () => {
     pageActive = false;
     pageGeneration++;
-    stopMonitoring();
     if (cancelCurrentProbe) cancelCurrentProbe();
   });
   window.addEventListener("pageshow", () => {
     pageActive = true;
     pageGeneration++;
-    startMonitoring();
-    if (document.visibilityState === "visible") void checkConnectivity();
   });
 
-  startMonitoring();
-  if (document.visibilityState === "visible") void checkConnectivity();
+  // Do not poll. Only handle the initial offline state and subsequent browser network events.
+  if (!navigator.onLine) void onOffline();
 
   const savedOnThisPage = checkedReturnUrl(safeStore.get());
   if (!isGame() && savedOnThisPage && savedOnThisPage.href === new URL(location.href).href && navigator.onLine) {
