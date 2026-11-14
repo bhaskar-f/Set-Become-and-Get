@@ -4,7 +4,7 @@ const { AuditLog } = require('../models');
 const { env } = require('../config/env');
 const cloudinary = require('cloudinary').v2;
 const researchedToday = require('../data/daily-learning-today.json');
-const DATE_RE = /^\\d{4}-\\d{2}-\\d{2}$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
 const publicToday = async (req, res) => {
   const date = today();
