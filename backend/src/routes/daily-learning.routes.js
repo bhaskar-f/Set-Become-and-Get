@@ -1,0 +1,14 @@
+const router = require('express').Router();
+const { z } = require('zod');
+const { asyncHandler } = require('../utils/http');
+const { requireAuth } = require('../middleware/auth.middleware');
+const { adminOnly } = require('../middleware/role.middleware');
+const { validate } = require('../middleware/validate.middleware');
+const controller = require('../controllers/daily-learning.controller');
+const affair = z.object({ title: z.string().trim().min(2).max(240), summary: z.string().trim().min(2).max(1800), takeaway: z.string().max(500).optional(), source: z.string().max(240).optional(), sourceUrl: z.string().url().max(1000).optional().or(z.literal('')) }).strict();
+const word = z.object({ word: z.string().trim().min(1).max(80), partOfSpeech: z.string().max(40).optional(), meaning: z.string().trim().min(1).max(500), example: z.string().trim().min(1).max(700), synonyms: z.string().max(240).optional() }).strict();
+router.get('/today', asyncHandler(controller.publicToday));
+router.get('/admin/list', requireAuth, adminOnly, asyncHandler(controller.list));
+router.get('/admin/:date', requireAuth, adminOnly, asyncHandler(controller.get));
+router.put('/admin', requireAuth, adminOnly, validate(z.object({ date: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/), currentAffairs: z.array(affair).max(20), vocabulary: z.array(word).length(10), published: z.boolean() }).strict()), asyncHandler(controller.save));
+module.exports = router;
