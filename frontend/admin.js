@@ -122,6 +122,7 @@
     ["Templates", "/admin/templates", "templates"],
     ["Notifications", "/admin/notifications", "notifications"],
     ["FAQs", "/admin/faqs", "faqs"],
+    ["Daily Learning", "/admin/daily-learning", "daily-learning"],
     ["Recruitment Sources", "/admin/recruitment-sources", "sources"],
   ];
   const authorNavItems = [
@@ -6244,6 +6245,48 @@
       content.append(notice(error.message, "is-error"));
     }
   }
+  async function renderDailyLearning() {
+    const content = shell("daily-learning");
+    const heading = el("div", "admin-page-heading");
+    heading.append(el("h1", "", "Daily Learning"));
+    content.append(heading, el("p", "admin-muted", "Prepare one date at a time. Current affairs can have up to 20 cards; vocabulary must have exactly 10 words before publishing."));
+    const form = el("form", "admin-form");
+    const date = el("input"); date.type = "date"; date.required = true;
+    date.value = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    const affairs = el("textarea"); affairs.rows = 10; affairs.value = "[]"; affairs.placeholder = '[{"title":"Headline","summary":"What happened and why it matters","takeaway":"Key takeaway","source":"Source name","sourceUrl":"https://..."}]';
+    const vocabulary = el("textarea"); vocabulary.rows = 14; vocabulary.value = "[]"; vocabulary.placeholder = '[{"word":"Word","partOfSpeech":"noun","meaning":"Meaning","example":"Example sentence","synonyms":"Similar words"}]';
+    const published = el("input"); published.type = "checkbox";
+    const field = (label, control, help) => { const wrap=el("label","admin-field"); wrap.append(el("span","",label),control); if(help)wrap.append(el("small","admin-muted",help)); return wrap; };
+    const actions = el("div","admin-form-actions");
+    const save = button("Save draft", () => submit(false), "is-primary");
+    const publish = button("Publish for today", () => submit(true));
+    actions.append(save,publish);
+    const status = el("div","admin-form-feedback");
+    form.append(field("Publication date",date,"India time (IST). One entry per date."),field("Current Affairs (JSON array)",affairs,"Each item needs title and summary. Optional: takeaway, source, sourceUrl."),field("Daily Vocabulary (JSON array)",vocabulary,"Exactly 10 entries when publishing. Each needs word, meaning and example."),field("Published",published,"Published entries are shown publicly for that date."),actions,status);
+    content.append(form);
+    const history = el("section","admin-section");
+    history.append(el("h2","admin-section-title","Recent entries"));
+    content.append(history);
+    async function submit(makePublic) {
+      status.textContent = "";
+      let a,v;
+      try { a=JSON.parse(affairs.value); v=JSON.parse(vocabulary.value); if(!Array.isArray(a)||!Array.isArray(v))throw new Error("Both fields must contain JSON arrays."); }
+      catch(error){status.textContent="Check the JSON: "+error.message;return;}
+      try {
+        await api("/daily-learning/admin",{method:"PUT",body:JSON.stringify({date:date.value,currentAffairs:a,vocabulary:v,published:makePublic})});
+        status.textContent=makePublic?"Published successfully.":"Draft saved.";
+        await loadHistory();
+      } catch(error){status.textContent=error.message;}
+    }
+    async function loadHistory() {
+      try {
+        const {data}=await api("/daily-learning/admin/list");
+        const rows=data.map(item=>{const row=el("div","admin-list-row");row.append(el("strong","",item.date),statusBadge(item.published?"PUBLISHED":"DRAFT"),el("span","",`${item.currentAffairs.length} current-affairs · ${item.vocabulary.length} words`),button("Edit",async()=>{try{const {data}=await api("/daily-learning/admin/"+item.date);date.value=data.date;affairs.value=JSON.stringify(data.currentAffairs,null,2);vocabulary.value=JSON.stringify(data.vocabulary,null,2);published.checked=data.published;window.scrollTo({top:0,behavior:"smooth"});}catch(error){status.textContent=error.message;}}));return row;});
+        if (rows.length) history.append(...rows); else history.append(empty("No Daily Learning entries yet."));
+      } catch(error){history.append(notice(error.message,"is-error"));}
+    }
+    await loadHistory();
+  }
   async function renderRoute() {
     const p = state.path;
     const admin = ["ADMIN", "SUPER_ADMIN"].includes(state.user.role);
@@ -6305,6 +6348,7 @@
     else if (p === "/admin/communities") await renderCommunities();
     else if (p === "/admin/notifications") await renderNotifications();
     else if (p === "/admin/faqs") await renderFAQs();
+    else if (p === "/admin/daily-learning") await renderDailyLearning();
     else if (p === "/admin/audit-log" && state.user.role === "SUPER_ADMIN")
       await renderAudit();
     else if (p === "/admin/staff" && state.user.role === "SUPER_ADMIN")
