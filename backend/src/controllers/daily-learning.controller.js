@@ -1,7 +1,7 @@
 const DailyLearning = require('../models/daily-learning.model');
 const { success, AppError } = require('../utils/http');
 const { AuditLog } = require('../models');
-const DATE_RE = /^\\d{4}-\\d{2}-\\d{2}$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
 const publicToday = async (req, res) => {
   const date = today();
