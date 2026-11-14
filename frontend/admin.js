@@ -6246,46 +6246,31 @@
     }
   }
   async function renderDailyLearning() {
-    const content = shell("daily-learning");
-    const heading = el("div", "admin-page-heading");
-    heading.append(el("h1", "", "Daily Learning"));
-    content.append(heading, el("p", "admin-muted", "Prepare one date at a time. Current affairs can have up to 20 cards; vocabulary must have exactly 10 words before publishing."));
-    const form = el("form", "admin-form");
-    const date = el("input"); date.type = "date"; date.required = true;
-    date.value = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-    const affairs = el("textarea"); affairs.rows = 10; affairs.value = "[]"; affairs.placeholder = '[{"title":"Headline","summary":"What happened and why it matters","takeaway":"Key takeaway","source":"Source name","sourceUrl":"https://..."}]';
-    const vocabulary = el("textarea"); vocabulary.rows = 14; vocabulary.value = "[]"; vocabulary.placeholder = '[{"word":"Word","partOfSpeech":"noun","meaning":"Meaning","example":"Example sentence","synonyms":"Similar words"}]';
-    const published = el("input"); published.type = "checkbox";
-    const field = (label, control, help) => { const wrap=el("label","admin-field"); wrap.append(el("span","",label),control); if(help)wrap.append(el("small","admin-muted",help)); return wrap; };
-    const actions = el("div","admin-form-actions");
-    const save = button("Save draft", () => submit(false), "is-primary");
-    const publish = button("Publish for today", () => submit(true));
-    actions.append(save,publish);
-    const status = el("div","admin-form-feedback");
-    form.append(field("Publication date",date,"India time (IST). One entry per date."),field("Current Affairs (JSON array)",affairs,"Each item needs title and summary. Optional: takeaway, source, sourceUrl."),field("Daily Vocabulary (JSON array)",vocabulary,"Exactly 10 entries when publishing. Each needs word, meaning and example."),field("Published",published,"Published entries are shown publicly for that date."),actions,status);
-    content.append(form);
-    const history = el("section","admin-section");
-    history.append(el("h2","admin-section-title","Recent entries"));
-    content.append(history);
-    async function submit(makePublic) {
-      status.textContent = "";
-      let a,v;
-      try { a=JSON.parse(affairs.value); v=JSON.parse(vocabulary.value); if(!Array.isArray(a)||!Array.isArray(v))throw new Error("Both fields must contain JSON arrays."); }
-      catch(error){status.textContent="Check the JSON: "+error.message;return;}
-      try {
-        await api("/daily-learning/admin",{method:"PUT",body:JSON.stringify({date:date.value,currentAffairs:a,vocabulary:v,published:makePublic})});
-        status.textContent=makePublic?"Published successfully.":"Draft saved.";
-        await loadHistory();
-      } catch(error){status.textContent=error.message;}
-    }
-    async function loadHistory() {
-      try {
-        const {data}=await api("/daily-learning/admin/list");
-        const rows=data.map(item=>{const row=el("div","admin-list-row");row.append(el("strong","",item.date),statusBadge(item.published?"PUBLISHED":"DRAFT"),el("span","",`${item.currentAffairs.length} current-affairs · ${item.vocabulary.length} words`),button("Edit",async()=>{try{const {data}=await api("/daily-learning/admin/"+item.date);date.value=data.date;affairs.value=JSON.stringify(data.currentAffairs,null,2);vocabulary.value=JSON.stringify(data.vocabulary,null,2);published.checked=data.published;window.scrollTo({top:0,behavior:"smooth"});}catch(error){status.textContent=error.message;}}));return row;});
-        if (rows.length) history.append(...rows); else history.append(empty("No Daily Learning entries yet."));
-      } catch(error){history.append(notice(error.message,"is-error"));}
-    }
-    await loadHistory();
+    const content=shell("daily-learning"), heading=el("div","admin-page-heading"); heading.append(el("h1","","Daily Learning"));
+    content.append(heading,el("p","admin-muted","Create visual cards. Up to 20 Current Affairs cards and exactly 10 vocabulary cards before publishing."));
+    const form=el("form","admin-form daily-admin-form"),date=el("input"),affairs=el("div","daily-admin-card-list"),words=el("div","daily-admin-card-list"),status=el("div","admin-form-feedback"),published=el("input"),history=el("section","admin-section");
+    date.type="date";date.required=true;date.value=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"});published.type="checkbox";
+    const field=(label,control,help)=>{const w=el("label","admin-field");w.append(el("span","",label),control);if(help)w.append(el("small","admin-muted",help));return w;};
+    const input=(value,placeholder)=>{const x=el("input");x.value=value||"";x.placeholder=placeholder||"";return x;};
+    const area=(value,rows,placeholder)=>{const x=el("textarea");x.value=value||"";x.rows=rows;x.placeholder=placeholder||"";return x;};
+    function imageEditor(card,item,label){const box=el("div","daily-admin-image-field"),url=input(item.imageUrl,"Paste HTTPS image URL"),file=el("input"),preview=el("img","daily-admin-image-preview");url.type="url";file.type="file";file.accept="image/png,image/jpeg,image/webp";preview.alt=label+" preview";
+      const refresh=()=>{if(url.value.trim()){preview.src=url.value.trim();preview.hidden=false;preview.onerror=()=>preview.hidden=true;}else{preview.removeAttribute("src");preview.hidden=true;}};url.addEventListener("input",refresh);
+      file.addEventListener("change",async()=>{const chosen=file.files&&file.files[0];if(!chosen)return;if(chosen.size>5242880){status.textContent="Image must be 5 MB or smaller.";file.value="";return;}const body=new FormData();body.append("image",chosen);status.textContent="Uploading image…";try{const r=await api("/daily-learning/admin/upload-image",{method:"POST",body});url.value=r.data.url;refresh();status.textContent="Image uploaded.";}catch(e){status.textContent=e.message;}finally{file.value="";}});
+      box.append(field(label+" image URL",url,"Paste a public HTTPS URL or upload PNG, JPG or WebP (max 5 MB)."),field("Upload image",file),preview,button("Remove image",()=>{url.value="";refresh();}));card.append(box);refresh();return url;}
+    function addCard(kind,item){item=item||{};const list=kind==="affair"?affairs:words,card=el("article","daily-admin-card"),head=el("div","daily-admin-card-heading"),title=el("h3","",kind==="affair"?"Current Affairs "+(list.children.length+1):"Vocabulary "+(list.children.length+1));head.append(title,button("Remove",()=>{card.remove();Array.from(list.children).forEach((c,i)=>{c.querySelector("h3").textContent=(kind==="affair"?"Current Affairs ":"Vocabulary ")+(i+1);});}));card.append(head);
+      const image=imageEditor(card,item,kind==="affair"?"Cover":"Illustration");let read;
+      if(kind==="affair"){const headline=input(item.title,"Headline"),explanation=area(item.summary||item.explanation,5,"Detailed explanation"),why=area(item.whyItMatters,3,"Why it matters"),take=area((item.importantTakeaways||(item.takeaway?[item.takeaway]:[])).join("\n"),3,"One takeaway per line"),source=input(item.source,"Source name"),link=input(item.sourceUrl,"https://...");link.type="url";
+        card.append(field("Headline",headline),field("Detailed explanation",explanation),field("Why it matters",why),field("Important Takeaways",take,"One takeaway per line."),field("Source name",source),field("Source link",link));read=()=>({imageUrl:image.value.trim(),title:headline.value.trim(),summary:explanation.value.trim(),whyItMatters:why.value.trim(),importantTakeaways:take.value.split("\n").map(x=>x.trim()).filter(Boolean),source:source.value.trim(),sourceUrl:link.value.trim()});
+      }else{const word=input(item.word,"Word"),pron=input(item.pronunciation,"Pronunciation (optional)"),part=input(item.partOfSpeech,"Part of speech"),meaning=area(item.meaning,2,"Meaning"),example=area(item.example,2,"Example sentence"),syn=input(item.synonyms,"Synonyms");card.append(field("Word",word),field("Pronunciation (optional)",pron),field("Part of speech",part),field("Meaning",meaning),field("Example sentence",example),field("Synonyms",syn));read=()=>({imageUrl:image.value.trim(),word:word.value.trim(),pronunciation:pron.value.trim(),partOfSpeech:part.value.trim(),meaning:meaning.value.trim(),example:example.value.trim(),synonyms:syn.value.trim()});}
+      card._read=read;list.append(card);}
+    const ah=el("div","daily-admin-section-heading"),vh=el("div","daily-admin-section-heading");ah.append(el("h2","","Current Affairs"),button("Add current-affairs card",()=>{if(affairs.children.length<20)addCard("affair");else status.textContent="Maximum 20 cards."; },"is-primary"));vh.append(el("h2","","Daily Vocabulary"),button("Add vocabulary card",()=>{if(words.children.length<10)addCard("word");else status.textContent="Maximum 10 words."; },"is-primary"));
+    const actions=el("div","admin-form-actions");actions.append(button("Save draft",()=>submit(false),"is-primary"),button("Publish for today",()=>submit(true)));
+    form.append(field("Publication date",date,"India time (IST)."),ah,affairs,vh,words,field("Published",published,"Published entries are visible publicly."),actions,status);content.append(form,history);history.append(el("h2","admin-section-title","Recent entries"));
+    function collect(list){return Array.from(list.children).map(x=>x._read());}
+    function fill(item){date.value=item.date;affairs.replaceChildren();words.replaceChildren();(item.currentAffairs||[]).forEach(x=>addCard("affair",x));(item.vocabulary||[]).forEach(x=>addCard("word",x));published.checked=!!item.published;status.textContent="Loaded "+item.date+".";window.scrollTo({top:0,behavior:"smooth"});}
+    async function submit(makePublic){const currentAffairs=collect(affairs),vocabulary=collect(words);if(currentAffairs.some(x=>!x.title||!x.summary)){status.textContent="Every Current Affairs card needs a headline and detailed explanation.";return;}if(vocabulary.some(x=>!x.word||!x.meaning||!x.example)){status.textContent="Every vocabulary card needs a word, meaning and example.";return;}if(makePublic&&vocabulary.length!==10){status.textContent="Add exactly 10 vocabulary cards before publishing.";return;}try{await api("/daily-learning/admin/save",{method:"PUT",body:JSON.stringify({date:date.value,currentAffairs,vocabulary,published:makePublic})});published.checked=makePublic;status.textContent=makePublic?"Published successfully.":"Draft saved successfully.";await loadHistory();}catch(e){status.textContent=e.message;}}
+    async function loadHistory(){try{const r=await api("/daily-learning/admin/list");history.querySelectorAll(".admin-list-row,.admin-empty,.admin-notice").forEach(x=>x.remove());r.data.forEach(item=>{const row=el("div","admin-list-row");row.append(el("strong","",item.date),statusBadge(item.published?"PUBLISHED":"DRAFT"),el("span","",item.currentAffairs.length+" current-affairs · "+item.vocabulary.length+" words"),button("Edit",async()=>{try{const result=await api("/daily-learning/admin/"+item.date);if(result.data)fill(result.data);else status.textContent="No entry found.";}catch(e){status.textContent=e.message;}}));history.append(row);});if(!r.data.length)history.append(empty("No Daily Learning entries yet."));}catch(e){history.append(notice(e.message,"is-error"));}}
+    addCard("affair");for(let i=0;i<10;i++)addCard("word");await loadHistory();
   }
   async function renderRoute() {
     const p = state.path;
