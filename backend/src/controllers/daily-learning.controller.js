@@ -4,12 +4,26 @@ const { AuditLog } = require('../models');
 const { env } = require('../config/env');
 const cloudinary = require('cloudinary').v2;
 const researchedToday = require('../data/daily-learning-today.json');
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_RE = /^\\d{4}-\\d{2}-\\d{2}$/;
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
 const publicToday = async (req, res) => {
   const date = today();
   const item = await DailyLearning.findOne({ date, published: true }).lean();
-  success(res, item ? { date, currentAffairs: item.currentAffairs, vocabulary: item.vocabulary } : null);
+
+  // The reviewed content shipped with the app is the public fallback for its
+  // matching date. Without this, visitors see an empty deck until an admin
+  // manually republishes the same content into MongoDB.
+  if (item) {
+    return success(res, { date, currentAffairs: item.currentAffairs, vocabulary: item.vocabulary });
+  }
+  if (researchedToday.date === date) {
+    return success(res, {
+      date,
+      currentAffairs: researchedToday.currentAffairs,
+      vocabulary: researchedToday.vocabulary,
+    });
+  }
+  return success(res, null);
 };
 const list = async (req, res) => {
   const items = await DailyLearning.find().sort({ date: -1 }).limit(45).select('date published currentAffairs vocabulary updatedAt').lean();
