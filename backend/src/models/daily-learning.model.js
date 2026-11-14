@@ -15,7 +15,7 @@ const vocabularySchema = new Schema({
   synonyms: { type: String, trim: true, maxlength: 240 },
 }, { _id: true });
 const dailyLearningSchema = new Schema({
-  date: { type: String, required: true, match: /^\\d{4}-\\d{2}-\\d{2}$/ },
+  date: { type: String, required: true, match: /^\d{4}-\d{2}-\d{2}$/ },
   currentAffairs: { type: [currentAffairSchema], default: [] },
   vocabulary: { type: [vocabularySchema], default: [] },
   published: { type: Boolean, default: false },
