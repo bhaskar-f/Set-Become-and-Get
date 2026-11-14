@@ -10,5 +10,5 @@ const word = z.object({ word: z.string().trim().min(1).max(80), partOfSpeech: z.
 router.get('/today', asyncHandler(controller.publicToday));
 router.get('/admin/list', requireAuth, adminOnly, asyncHandler(controller.list));
 router.get('/admin/:date', requireAuth, adminOnly, asyncHandler(controller.get));
-router.put('/admin', requireAuth, adminOnly, validate(z.object({ date: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/), currentAffairs: z.array(affair).max(20), vocabulary: z.array(word).length(10), published: z.boolean() }).strict()), asyncHandler(controller.save));
+router.put('/admin', requireAuth, adminOnly, validate(z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), currentAffairs: z.array(affair).max(20), vocabulary: z.array(word).max(10), published: z.boolean() }).strict()), asyncHandler(controller.save));
 module.exports = router;
