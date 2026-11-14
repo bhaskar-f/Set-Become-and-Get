@@ -1,21 +1,59 @@
+/*
+ * SetBGet connectivity controller.
+ *
+ * One explicit state machine decides whether the offline fallback (Number Rush) may be used:
+ *
+ *   ONLINE               SetBGet answered a real request, or nothing suggests a problem.
+ *   VERIFYING            A reachability check is in flight.
+ *   OFFLINE              SetBGet is unreachable AND an independent internet check failed too.
+ *   WEBSITE_UNAVAILABLE  The internet works, but SetBGet itself does not answer correctly.
+ *
+ * Rules:
+ *  - Browser `online`/`offline` events and `navigator.onLine` are only HINTS. They start a
+ *    verification; they never change the state themselves.
+ *  - OFFLINE is only declared after the origin probe fails (twice, for `offline` events on a
+ *    page that is already loaded) and the third-party internet check fails as well.
+ *  - A saved return URL is navigation data. It is never used to infer connectivity.
+ *  - There is no timer while the site is reachable. A retry back-off runs only while the state
+ *    is OFFLINE (or WEBSITE_UNAVAILABLE on the fallback page / during an offline session) and
+ *    stops the moment the site is reachable again, so a missed `online` event cannot strand
+ *    the user.
+ */
 (function () {
   "use strict";
-  const RETURN_KEY = "setbget:offline:return-url";
-  const OFFLINE_ENTRY_KEY = "setbget:number-rush:offline-entry";
-  const GAME_PATH = "/number-rush";
-  const CHECK_PATH = "/connectivity-check.txt";
-  const CHECK_TIMEOUT_MS = 2_500;
-  const FAILURES_TO_OFFLINE = 2;
-  const SUCCESSES_TO_RESTORE = 1;
-  const isGamePath = pathname => pathname === GAME_PATH || pathname.startsWith(`${GAME_PATH}/`);
-  const isGame = () => isGamePath(location.pathname);
-  const safeStore = {
-    get() { try { return sessionStorage.getItem(RETURN_KEY); } catch (_) { return null; } },
-    set(value) { try { sessionStorage.setItem(RETURN_KEY, value); return true; } catch (_) { return false; } },
-    clear() { try { sessionStorage.removeItem(RETURN_KEY); } catch (_) {} },
-    markOfflineEntry() { try { sessionStorage.setItem(OFFLINE_ENTRY_KEY, "1"); return true; } catch (_) { return false; } },
-    clearOfflineEntry() { try { sessionStorage.removeItem(OFFLINE_ENTRY_KEY); } catch (_) {} },
+
+  const DEFAULTS = {
+    checkPath: "/connectivity-check.txt",
+    internetCheckUrl: "https://www.gstatic.com/generate_204",
+    probeTimeoutMs: 4000,
+    confirmDelayMs: 1500,
+    retryBaseMs: 2000,
+    retryMaxMs: 30000,
+    staleSessionMs: 6 * 60 * 60 * 1000,
+    reloadGuardMs: 10000,
+    resumeCheckAfterMs: 30000,
   };
+  const cfg = Object.assign({}, DEFAULTS, window.SETBGET_CONNECTIVITY_CONFIG || {});
+
+  const STATES = Object.freeze({
+    ONLINE: "ONLINE",
+    VERIFYING: "VERIFYING",
+    OFFLINE: "OFFLINE",
+    WEBSITE_UNAVAILABLE: "WEBSITE_UNAVAILABLE",
+  });
+  const SESSION_KEY = "setbget:offline:session";
+  const RELOAD_KEY = "setbget:offline:fallback-reload";
+  // Keys written by earlier versions. They carried no trustworthy meaning; remove them.
+  const LEGACY_KEYS = ["setbget:offline:return-url", "setbget:number-rush:offline-entry"];
+  const GAME_PATH = "/number-rush";
+
+  const isGamePath = pathname => pathname === GAME_PATH || pathname.startsWith(`${GAME_PATH}/`);
+  const isGame = isGamePath(location.pathname);
+  const isFallback = (() => {
+    try { return document.documentElement.getAttribute("data-sbg-fallback") === "1"; } catch (_) { return false; }
+  })();
+
+  // ---- session (an automatic offline redirect that is still waiting for recovery) ----------
   function checkedReturnUrl(value) {
     if (typeof value !== "string" || !value) return null;
     try {
@@ -24,188 +62,217 @@
       return url;
     } catch (_) { return null; }
   }
+  const store = {
+    read() {
+      try {
+        const parsed = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
+        if (!parsed || typeof parsed !== "object") return null;
+        if (typeof parsed.at !== "number" || Date.now() - parsed.at > cfg.staleSessionMs) return null;
+        return { returnUrl: checkedReturnUrl(parsed.returnUrl) ? parsed.returnUrl : null, at: parsed.at };
+      } catch (_) { return null; }
+    },
+    write(returnUrl) {
+      try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ returnUrl, at: Date.now() })); return true; } catch (_) { return false; }
+    },
+    clear() { try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {} },
+    clearLegacy() { try { LEGACY_KEYS.forEach(key => sessionStorage.removeItem(key)); } catch (_) {} },
+  };
+  store.clearLegacy();
 
-  let pageActive = true;
-  let unavailable = isGame() && (Boolean(checkedReturnUrl(safeStore.get())) || !navigator.onLine);
-  let redirecting = false;
-  let consecutiveFailures = 0;
-  let consecutiveSuccesses = 0;
-  let pageGeneration = 0;
-  let currentController = null;
-  let cancelCurrentProbe = null;
-  let currentProbe = null;
-  let probeQueued = false;
-  if (isGame() && safeStore.get() && !checkedReturnUrl(safeStore.get())) safeStore.clear();
-
+  // ---- service worker registration ---------------------------------------------------------
   let registrationReady = Promise.resolve(false);
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     registrationReady = navigator.serviceWorker.register("/service-worker.js", { scope: "/" })
       .then(() => navigator.serviceWorker.ready)
-      .then(() => {
-        if (navigator.serviceWorker.controller) return true;
-        return new Promise(resolve => {
-          let settled = false;
-          const finish = value => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timeout);
-            navigator.serviceWorker.removeEventListener("controllerchange", changed);
-            resolve(value);
-          };
-          const changed = () => finish(Boolean(navigator.serviceWorker.controller));
-          const timeout = setTimeout(() => finish(Boolean(navigator.serviceWorker.controller)), 5_000);
-          navigator.serviceWorker.addEventListener("controllerchange", changed);
-          if (navigator.serviceWorker.controller) finish(true);
-        });
-      }).catch(() => false);
+      .then(() => true)
+      .catch(() => false);
+  }
+  async function gameAvailableOffline() {
+    // Only redirect to a page that can actually load without a network.
+    try {
+      if (!(await registrationReady) || typeof caches === "undefined") return false;
+      return Boolean(await caches.match("/number-rush/index.html"));
+    } catch (_) { return false; }
   }
 
-  async function declareUnavailable() {
-    if (unavailable || !pageActive) return;
-    unavailable = true;
-    consecutiveSuccesses = 0;
-    if (isGame()) {
-      if (typeof window.NumberRushHandleConnectivityLost === "function") window.NumberRushHandleConnectivityLost();
+  // ---- state -------------------------------------------------------------------------------
+  const listeners = new Set();
+  const initialSession = isGame || isFallback ? store.read() : null;
+  let state = STATES.ONLINE;
+  let stableState = initialSession ? STATES.OFFLINE : STATES.ONLINE; // last non-VERIFYING state
+  let generation = 0;
+  let abortController = null;
+  let retryTimer = 0;
+  let retryAttempt = 0;
+  let redirecting = false;
+  let restoring = false;
+  let hiddenAt = 0;
+
+  function setState(next) {
+    if (next === state) return;
+    const previous = state;
+    const previousStable = stableState;
+    state = next;
+    if (next !== STATES.VERIFYING) stableState = next;
+    listeners.forEach(fn => { try { fn(next, { previous, previousStable }); } catch (_) {} });
+  }
+
+  // ---- reachability probe ------------------------------------------------------------------
+  async function timedFetch(url, init, readBody) {
+    const controller = new AbortController();
+    abortController = controller;
+    const timer = setTimeout(() => { try { controller.abort(); } catch (_) {} }, cfg.probeTimeoutMs);
+    try {
+      const response = await fetch(url, Object.assign({ signal: controller.signal }, init));
+      const body = readBody ? await response.text() : "";
+      return { response, body };
+    } finally { clearTimeout(timer); }
+  }
+
+  /** Returns "reachable" | "site-down" | "offline". */
+  async function probeOnce() {
+    const originUrl = new URL(cfg.checkPath, location.origin);
+    originUrl.searchParams.set("_", String(Date.now()));
+    try {
+      const { response, body } = await timedFetch(originUrl.href, {
+        method: "GET", mode: "same-origin", redirect: "error", cache: "no-store", credentials: "omit",
+      }, true);
+      if (response.ok && response.status === 200) {
+        // A 200 with the wrong body is a captive portal / proxy, not SetBGet.
+        return body.trim() === "ok" ? "reachable" : "offline";
+      }
+      // The origin answered with an error status: the internet itself clearly works.
+      return "site-down";
+    } catch (_) {
+      if (!navigator.onLine) return "offline";
+      try {
+        await timedFetch(cfg.internetCheckUrl, {
+          method: "GET", mode: "no-cors", cache: "no-store", credentials: "omit", referrerPolicy: "no-referrer",
+        }, false);
+        return "site-down"; // the wider internet answered; only SetBGet failed
+      } catch (_2) { return "offline"; }
+    }
+  }
+
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  function cancelPending() {
+    generation++;
+    clearTimeout(retryTimer);
+    retryTimer = 0;
+    try { abortController && abortController.abort(); } catch (_) {}
+  }
+
+  /**
+   * Verify reachability. `confirm` requires two failed origin probes, spaced apart, before OFFLINE
+   * (used when a browser `offline` event arrives on a page that is already loaded, because those
+   * events also fire for harmless adapter changes).
+   */
+  async function verify(reason, options = {}) {
+    cancelPending();
+    const mine = generation;
+    setState(STATES.VERIFYING);
+    let result = await probeOnce();
+    if (mine !== generation) return state;
+    if (result === "offline" && options.confirm) {
+      await sleep(cfg.confirmDelayMs);
+      if (mine !== generation) return state;
+      result = await probeOnce();
+      if (mine !== generation) return state;
+    }
+    apply(result);
+    return state;
+  }
+
+  function scheduleRetry() {
+    clearTimeout(retryTimer);
+    const delay = Math.min(cfg.retryMaxMs, cfg.retryBaseMs * Math.pow(2, retryAttempt++));
+    retryTimer = setTimeout(() => {
+      retryTimer = 0;
+      if (document.visibilityState === "hidden") { retryAttempt = Math.max(0, retryAttempt - 1); scheduleRetry(); return; }
+      void verify("retry");
+    }, delay);
+  }
+
+  function apply(result) {
+    if (result === "reachable") {
+      retryAttempt = 0;
+      setState(STATES.ONLINE);
+      if (!isGame && !isFallback) store.clear(); // a real SetBGet page loaded: any old session is obsolete
+      if (isFallback) reloadFallbackOnce();
       return;
     }
+    if (result === "site-down") {
+      setState(STATES.WEBSITE_UNAVAILABLE);
+      if (isFallback || store.read()) scheduleRetry();
+      return;
+    }
+    setState(STATES.OFFLINE);
+    scheduleRetry();
+    if (!isGame) void enterOfflineMode();
+  }
+
+  async function enterOfflineMode() {
     if (redirecting) return;
-    const original = checkedReturnUrl(safeStore.get());
-    if (!original) safeStore.set(new URL(location.href).href);
     redirecting = true;
-    await registrationReady;
-    if (!pageActive || isGame()) return;
-    const stored = safeStore.markOfflineEntry();
-    location.replace(stored ? `${GAME_PATH}/` : `${GAME_PATH}/?offline=1`);
+    const available = await gameAvailableOffline();
+    if (!available || state !== STATES.OFFLINE) { redirecting = false; return; }
+    const session = store.read();
+    if (!session || !session.returnUrl) store.write(new URL(location.href).href);
+    location.replace(`${GAME_PATH}/`);
   }
 
-  function handleReachable() {
-    if (!unavailable || !pageActive) return;
-    unavailable = false;
-    consecutiveFailures = 0;
-    if (!isGame()) return;
-    const target = checkedReturnUrl(safeStore.get());
-    const shouldDefer = typeof window.NumberRushHandleConnectionRestored === "function"
-      ? window.NumberRushHandleConnectionRestored(target ? target.href : null)
-      : false;
-    if (!shouldDefer && target) location.replace(target.href);
-  }
-
-  async function performProbe() {
-    if (!pageActive || document.visibilityState !== "visible") return null;
-    const generation = pageGeneration;
-    const controller = new AbortController();
-    currentController = controller;
-    let rejectCancellation;
-    const cancelled = new Promise((_, reject) => { rejectCancellation = reject; });
-    cancelCurrentProbe = () => {
-      controller.abort();
-      rejectCancellation(new Error("Connectivity probe cancelled."));
-    };
-    let timeoutId;
-    const timeout = new Promise((_, reject) => {
-      timeoutId = setTimeout(() => {
-        controller.abort();
-        reject(new Error("Connectivity probe timed out."));
-      }, CHECK_TIMEOUT_MS);
-    });
-
+  function reloadFallbackOnce() {
     try {
-      const url = new URL(CHECK_PATH, location.origin);
-      url.searchParams.set("_", String(Date.now()));
-      const response = await Promise.race([
-        fetch(url.href, {
-          method: "GET",
-          mode: "same-origin",
-          redirect: "error",
-          cache: "no-store",
-          credentials: "omit",
-          signal: controller.signal,
-        }),
-        timeout,
-        cancelled,
-      ]);
-      if (!pageActive || generation !== pageGeneration) return null;
-      if (!response.ok || response.status !== 200) throw new Error(`Connectivity probe returned HTTP ${response.status}.`);
-      const body = await Promise.race([response.text(), timeout, cancelled]);
-      if (!pageActive || generation !== pageGeneration) return null;
-      if (body.trim() !== "ok") throw new Error("Connectivity probe returned an unexpected body.");
-
-      consecutiveFailures = 0;
-      if (unavailable) {
-        consecutiveSuccesses++;
-        if (consecutiveSuccesses >= SUCCESSES_TO_RESTORE) {
-          consecutiveSuccesses = 0;
-          handleReachable();
-        }
-      } else {
-        consecutiveSuccesses = 0;
-      }
-      return true;
-    } catch (_) {
-      if (!pageActive || generation !== pageGeneration) return null;
-      consecutiveSuccesses = 0;
-      consecutiveFailures++;
-      if (consecutiveFailures >= FAILURES_TO_OFFLINE) await declareUnavailable();
-      return false;
-    } finally {
-      clearTimeout(timeoutId);
-      if (currentController === controller) currentController = null;
-      if (cancelCurrentProbe) cancelCurrentProbe = null;
-    }
+      const last = Number(sessionStorage.getItem(RELOAD_KEY) || 0);
+      if (Date.now() - last < cfg.reloadGuardMs) return; // avoid a reload loop
+      sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+    } catch (_) {}
+    location.reload();
   }
 
-  function checkConnectivity() {
-    if (currentProbe) {
-      probeQueued = true;
-      return currentProbe.then(() => {
-        if (!probeQueued || !pageActive || document.visibilityState !== "visible") return null;
-        probeQueued = false;
-        return checkConnectivity();
-      });
-    }
-    if (!pageActive || document.visibilityState !== "visible") return Promise.resolve(null);
-    const probe = performProbe();
-    currentProbe = probe.finally(() => {
-      if (currentProbe === wrappedProbe) currentProbe = null;
-      if (probeQueued && pageActive && document.visibilityState === "visible") {
-        probeQueued = false;
-        void checkConnectivity();
-      }
-    });
-    const wrappedProbe = currentProbe;
-    return wrappedProbe;
+  function restoreOriginalPage() {
+    const session = store.read();
+    const target = session && checkedReturnUrl(session.returnUrl);
+    store.clear();
+    if (!target || restoring) return false;
+    restoring = true;
+    location.replace(target.href);
+    return true;
   }
 
-  async function onOffline() {
-    consecutiveFailures = FAILURES_TO_OFFLINE;
-    consecutiveSuccesses = 0;
-    await declareUnavailable();
-  }
-
-  function onOnline() {
-    consecutiveFailures = 0;
-    consecutiveSuccesses = 0;
-    return checkConnectivity();
-  }
-
-  window.addEventListener("offline", onOffline);
-  window.addEventListener("online", onOnline);
-  window.addEventListener("pagehide", () => {
-    pageActive = false;
-    pageGeneration++;
-    if (cancelCurrentProbe) cancelCurrentProbe();
+  // ---- browser signals ---------------------------------------------------------------------
+  window.addEventListener("offline", () => { void verify("offline-event", { confirm: !isGame || stableState !== STATES.OFFLINE }); });
+  window.addEventListener("online", () => { void verify("online-event"); });
+  window.addEventListener("pagehide", () => cancelPending());
+  window.addEventListener("pageshow", event => {
+    if (event && event.persisted && !navigator.onLine) void verify("pageshow", { confirm: true });
   });
-  window.addEventListener("pageshow", () => {
-    pageActive = true;
-    pageGeneration++;
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") { hiddenAt = Date.now(); return; }
+    const away = hiddenAt ? Date.now() - hiddenAt : 0;
+    hiddenAt = 0;
+    // One check when the user comes back: always if we are not ONLINE, otherwise only after a long absence.
+    if (state === STATES.VERIFYING) return;
+    if (state !== STATES.ONLINE || away >= cfg.resumeCheckAfterMs) void verify("resume", { confirm: state === STATES.ONLINE });
   });
 
-  // Do not poll. Only handle the initial offline state and subsequent browser network events.
-  if (!navigator.onLine) void onOffline();
-
-  const savedOnThisPage = checkedReturnUrl(safeStore.get());
-  if (!isGame() && savedOnThisPage && savedOnThisPage.href === new URL(location.href).href && navigator.onLine) {
-    safeStore.clear();
-    safeStore.clearOfflineEntry();
+  // ---- initial verification (one-time, never periodic) -------------------------------------
+  if (isGame || isFallback) {
+    if (initialSession || isFallback || !navigator.onLine) void verify("initial");
+  } else if (!navigator.onLine) {
+    void verify("initial", { confirm: true });
+  } else {
+    store.clear(); // a real page loaded over the network proves reachability
   }
+
+  window.SetBGetConnectivity = Object.freeze({
+    STATES,
+    get state() { return state; },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    verify,
+    hasSession() { return Boolean(store.read()); },
+    getReturnUrl() { const s = store.read(); return s && s.returnUrl; },
+    restoreOriginalPage,
+  });
 })();

@@ -36,6 +36,19 @@ for (const name of ['index.html', 'game.css', 'game.js', 'questions.js', 'storag
 for (const name of ['offline.html', 'offline.css', 'offline.js', 'service-worker.js'])
   fs.copyFileSync(path.join(root, name), path.join(output, name));
 fs.copyFileSync(path.join(root, 'connectivity-check.txt'), path.join(output, 'connectivity-check.txt'));
+// Stamp the service worker cache name with a hash of every precached asset, so changing any of
+// them ships a new worker, a fresh cache and removal of the old cache (no manual version bumps).
+{
+  const workerPath = path.join(output, 'service-worker.js');
+  const worker = fs.readFileSync(workerPath, 'utf8');
+  const assets = JSON.parse(worker.match(/const ASSETS = (\[.*?\]);/)[1].replace(/'/g, '"'));
+  const hash = require('node:crypto').createHash('sha256');
+  for (const asset of assets) {
+    const file = asset.endsWith('/') ? asset + 'index.html' : asset;
+    hash.update(asset).update(fs.readFileSync(path.join(output, file)));
+  }
+  fs.writeFileSync(workerPath, worker.replace('__BUILD_ID__', hash.digest('hex').slice(0, 12)));
+}
 fs.writeFileSync(path.join(output, 'api-config.js'), `window.JPEDIA_CONFIG = Object.freeze({ API_BASE_URL: ${JSON.stringify(apiBase.replace(/\/$/, ''))} });\n`);
 const canonicalHost = 'https://www.setbget.in';
 const publicRoutes = ['/', '/jobs', '/communities', '/faqs', '/boards', '/services', '/services/preparation', '/services/eligibility', '/privacy', '/terms', '/about', '/contact'];

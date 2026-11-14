@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-sbg-fallback="1">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -9,16 +9,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=42dot+Sans:wght@300..800&family=Inria+Sans:wght@400;700&family=Mada:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/offline.css" />
+    <script defer src="/offline-connectivity.js"></script>
     <script defer src="/offline.js"></script>
   </head>
   <body>
     <main>
       <a class="brand" href="/" aria-label="SetBGet home"><img src="/logo.png" alt="SetBGet" /></a>
-      <div class="signal">CONNECTION INTERRUPTED</div>
-      <h1>No internet? Play Number Rush.</h1>
-      <p>Your connection is taking a break. Keep your mind active while you wait.</p>
+      <div class="signal" id="signal">CHECKING YOUR CONNECTION…</div>
+      <h1 id="heading">Can’t reach this page right now.</h1>
+      <p id="message">We are checking whether the problem is your connection or SetBGet. Number Rush is ready if you want to play meanwhile.</p>
       <a class="play" href="/number-rush/">Play Number Rush →</a>
-      <div class="status">OFFLINE · READY TO PLAY</div>
+      <div class="status" id="status">CHECKING…</div>
       <div class="actions">
         <button id="retry" type="button">Try this page again</button>
         <a href="/">Return to SetBGet</a>

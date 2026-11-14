@@ -14,20 +14,13 @@
   let timer = engine.createTimer();
   let state = "ready", score = 0, correct = 0, incorrect = 0, questionNo = 0, question = null;
   let highestLevel = 1, locked = false, answeredQuestion = false, raf = 0;
-  let restoreAfterRound = null, restoreTimer = 0, connectionRestored = false, connectivityUnavailable = false;
+  let restoreAfterRound = false, restoreTimer = 0, restoredNotice = false;
   let timeDeltaTimer = 0, levelToastTimer = 0;
-  const OFFLINE_ENTRY_KEY = "setbget:number-rush:offline-entry";
-  const offlineLaunch = (() => {
-    let marked = false, hasReturnTarget = false;
-    try {
-      marked = sessionStorage.getItem(OFFLINE_ENTRY_KEY) === "1";
-      hasReturnTarget = Boolean(sessionStorage.getItem("setbget:offline:return-url"));
-      sessionStorage.removeItem(OFFLINE_ENTRY_KEY);
-    } catch (_) {}
-    if (new URLSearchParams(location.search).get("offline") === "1") marked = true;
-    return marked || hasReturnTarget || !navigator.onLine;
-  })();
-  connectivityUnavailable = offlineLaunch;
+  // Connectivity is owned by offline-connectivity.js. The game only renders its state; it never
+  // infers "offline" from a saved return URL, a query string or navigator.onLine.
+  const conn = window.SetBGetConnectivity || {
+    state: "ONLINE", subscribe() { return () => {}; }, hasSession: () => false, restoreOriginalPage: () => false,
+  };
   const formatScore = value => String(value).padStart(3, "0");
   const formatLevel = level => `LEVEL ${String(level).padStart(2, "0")} — ${engine.LEVELS[level - 1].name}`;
 
@@ -224,11 +217,7 @@
     $("newBest").hidden = !isBest;
     show("result");
     ui.welcomeBest.textContent = formatScore(best);
-    if (restoreAfterRound && !connectivityUnavailable) {
-      restoreTimer = setTimeout(() => {
-        if (state === "over" && !connectivityUnavailable) location.replace(restoreAfterRound);
-      }, 2200);
-    }
+    if (restoreAfterRound && conn.state === "ONLINE") scheduleRestore();
   }
 
   function exit() {
@@ -238,13 +227,52 @@
     location.href = "/";
   }
 
-  function network() {
-    if (connectionRestored) return;
-    const online = navigator.onLine && !connectivityUnavailable;
-    ui.network.hidden = online;
-    ui.network.textContent = online ? "" : "OFFLINE";
-    ui.network.classList.toggle("offline", !online);
+  function renderConnection() {
+    const offline = conn.state === "OFFLINE";
+    if (state === "ready") setWelcomeMode(offline);
+    if (offline) {
+      ui.network.hidden = false;
+      ui.network.textContent = "OFFLINE";
+      ui.network.classList.add("offline");
+    } else if (restoredNotice) {
+      ui.network.hidden = false;
+      ui.network.textContent = "CONNECTION RESTORED";
+      ui.network.classList.remove("offline");
+    } else {
+      ui.network.hidden = true;
+      ui.network.textContent = "";
+      ui.network.classList.remove("offline");
+    }
   }
+
+  // Recovery: never interrupt an active round; restore the original page when the round is over.
+  function beginRestore() {
+    restoredNotice = true;
+    restoreAfterRound = true;
+    if (state === "playing" || state === "paused") return;
+    if (state === "over") { scheduleRestore(); return; }
+    restoreAfterRound = false;
+    conn.restoreOriginalPage();
+  }
+  function scheduleRestore() {
+    clearTimeout(restoreTimer);
+    restoreTimer = setTimeout(() => {
+      if (state === "over" && conn.state === "ONLINE") { restoreAfterRound = false; conn.restoreOriginalPage(); }
+    }, 2200);
+  }
+
+  conn.subscribe((next, context) => {
+    if (next === "VERIFYING") return;
+    if (next === "OFFLINE") {
+      restoredNotice = false;
+      restoreAfterRound = false;
+      clearTimeout(restoreTimer);
+    } else if (next === "ONLINE") {
+      if (conn.hasSession()) beginRestore();
+      else if (context.previousStable === "OFFLINE") restoredNotice = true;
+    }
+    renderConnection();
+  });
 
   ui.start.addEventListener("click", startGame);
   ui.again.addEventListener("click", startGame);
@@ -261,39 +289,7 @@
     if (state === "playing" && /^[1-4]$/.test(event.key)) { event.preventDefault(); answer(Number(event.key) - 1); }
   });
 
-  setWelcomeMode(offlineLaunch);
-  window.addEventListener("online", network);
-  window.addEventListener("offline", () => {
-    window.NumberRushHandleConnectivityLost();
-  });
-  window.NumberRushHandleConnectivityLost = () => {
-    connectionRestored = false;
-    connectivityUnavailable = true;
-    network();
-    if (state === "ready") setWelcomeMode(true);
-  };
-  window.NumberRushHandleConnectionRestored = returnUrl => {
-    connectionRestored = true;
-    connectivityUnavailable = false;
-    ui.network.hidden = false;
-    ui.network.textContent = "CONNECTION RESTORED";
-    ui.network.classList.remove("offline");
-    setWelcomeMode(false);
-    try {
-      sessionStorage.removeItem(OFFLINE_ENTRY_KEY);
-      const current = new URL(location.href);
-      if (current.searchParams.get("offline") === "1") {
-        current.searchParams.delete("offline");
-        history.replaceState(history.state, "", `${current.pathname}${current.search}${current.hash}`);
-      }
-    } catch (_) {}
-    if (returnUrl && (state === "playing" || state === "paused")) {
-      restoreAfterRound = returnUrl;
-      return true;
-    }
-    return false;
-  };
-  network();
+  renderConnection();
   document.addEventListener("visibilitychange", () => {
     if (document.hidden && state === "playing") pause();
   });
