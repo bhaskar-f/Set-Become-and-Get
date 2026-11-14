@@ -9,7 +9,17 @@ const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' 
 const publicToday = async (req, res) => {
   const date = today();
   const item = await DailyLearning.findOne({ date, published: true }).lean();
-  success(res, item ? { date, currentAffairs: item.currentAffairs, vocabulary: item.vocabulary } : null);
+  if (item) {
+    return success(res, { date, currentAffairs: item.currentAffairs, vocabulary: item.vocabulary });
+  }
+  if (researchedToday.date === date) {
+    return success(res, {
+      date,
+      currentAffairs: researchedToday.currentAffairs,
+      vocabulary: researchedToday.vocabulary,
+    });
+  }
+  return success(res, null);
 };
 const list = async (req, res) => {
   const items = await DailyLearning.find().sort({ date: -1 }).limit(45).select('date published currentAffairs vocabulary updatedAt').lean();

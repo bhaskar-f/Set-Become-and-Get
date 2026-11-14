@@ -8,7 +8,7 @@
   const home = document.querySelector('#home');
   if (!home) return;
   home.insertBefore(root, home.querySelector('#jobs'));
-  let data = null, active = 'affairs', index = 0, startX = 0;
+  let data = null, active = 'affairs', index = 0, startX = 0, pendingOpen = false;
   const $ = (s) => root.querySelector(s);
   const esc = (v) => String(v || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const items = () => active === 'affairs' ? (data?.currentAffairs || []) : (data?.vocabulary || []);
@@ -44,13 +44,22 @@
       $('#dailyVocabularyCount').textContent = data.vocabulary.length;
       render();
       const key = 'setbget-daily-learning-seen';
-      if (localStorage.getItem(key) !== data.date) {
-        setTimeout(() => openDailyLearning(), 450);
+      if (pendingOpen) {
+        pendingOpen = false;
         localStorage.setItem(key, data.date);
+        openDailyLearning();
+      } else if (localStorage.getItem(key) !== data.date) {
+        localStorage.setItem(key, data.date);
+        setTimeout(() => openDailyLearning(), 450);
       }
     } catch { $('#dailyLearningDeck').innerHTML = '<p class="daily-empty">Daily Learning is temporarily unavailable.</p>'; }
   }
   function openDailyLearning() {
+    if (!data || !Array.isArray(data.currentAffairs) || !Array.isArray(data.vocabulary)) {
+      pendingOpen = true;
+      root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     const backdrop = document.querySelector('#modalBackdrop'), content = document.querySelector('#modalContent');
     if (!backdrop || !content) { root.scrollIntoView({ behavior: 'smooth' }); return; }
     content.replaceChildren();
