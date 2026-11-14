@@ -6282,7 +6282,7 @@
       try {
         const {data}=await api("/daily-learning/admin/list");
         const rows=data.map(item=>{const row=el("div","admin-list-row");row.append(el("strong","",item.date),statusBadge(item.published?"PUBLISHED":"DRAFT"),el("span","",`${item.currentAffairs.length} current-affairs · ${item.vocabulary.length} words`),button("Edit",async()=>{try{const {data}=await api("/daily-learning/admin/"+item.date);date.value=data.date;affairs.value=JSON.stringify(data.currentAffairs,null,2);vocabulary.value=JSON.stringify(data.vocabulary,null,2);published.checked=data.published;window.scrollTo({top:0,behavior:"smooth"});}catch(error){status.textContent=error.message;}}));return row;});
-        history.append(rows.length? ...rows : empty("No Daily Learning entries yet."));
+        if (rows.length) history.append(...rows); else history.append(empty("No Daily Learning entries yet."));
       } catch(error){history.append(notice(error.message,"is-error"));}
     }
     await loadHistory();
