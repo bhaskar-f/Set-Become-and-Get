@@ -3,24 +3,24 @@
   "currentAffairs": [
     {
       "title": "India’s merchandise exports reach a record in October 2026",
-      "summary": "India’s merchandise exports were estimated at US$49.47 billion in October 2026, up 45.06% from US$34.11 billion in October 2025. The Ministry of Commerce and Industry also estimated total exports of goods and services at US$89.99 billion, a 29.90% year-on-year rise. Merchandise imports stood at US$89.35 billion, leaving a merchandise trade deficit of about US$39.88 billion. The services figure for October is an estimate because the latest RBI services data available to the ministry was for September.",
-      "takeaway": "Exam link: distinguish merchandise trade from total trade (goods + services). Strong export growth can coexist with a wider merchandise trade deficit when imports are higher.",
+      "summary": "India’s merchandise exports were US$49.47 billion in October 2026, up from US$34.11 billion in October 2025 (about 45.06%). Merchandise imports were US$89.35 billion, producing a merchandise trade deficit of US$39.88 billion. The Ministry estimated combined merchandise-and-services exports at US$89.99 billion and imports at US$110.07 billion, a combined trade deficit of US$20.09 billion. Important caveat: October 2026 services figures are estimates because the latest RBI services data available to the ministry was for September 2026.",
+      "takeaway": "Exam link: merchandise trade covers goods; total trade combines goods and services. Do not confuse the US$39.88 billion merchandise deficit with the US$20.09 billion combined deficit.",
       "source": "Ministry of Commerce & Industry / Press Information Bureau, 13 November 2026",
       "sourceUrl": "https://www.pib.gov.in/PressReleseDetailm.aspx?PRID=2335914&lang=2&reg=48"
     },
     {
       "title": "DGFT prohibits export of lithium-ion battery black mass",
-      "summary": "The Directorate General of Foreign Trade changed the export policy for lithium-ion battery black mass under ITC(HS) code 85491400 from ‘Free’ to ‘Prohibited’ through Notification No. 49/2026-27, dated 10 November 2026. Black mass is the powder obtained by shredding used lithium-ion batteries and battery-manufacturing waste. It contains recoverable critical minerals such as lithium, cobalt, nickel and manganese. The stated policy aim is to make more material available to domestic recyclers and strengthen recovery of critical minerals in India.",
-      "takeaway": "Exam link: connect this measure with critical-mineral security, battery recycling, electric mobility and the circular economy. The notification says the prohibition applies until further orders.",
+      "summary": "The Directorate General of Foreign Trade (DGFT), through Notification No. 49/2026-27 dated 10 November 2026, changed the export policy for lithium-ion battery black mass under ITC(HS) code 85491400 from ‘Free’ to ‘Prohibited’, with immediate effect and until further orders. Black mass is the powder produced by shredding end-of-life lithium-ion batteries and battery-manufacturing waste. It contains recoverable critical minerals such as lithium, cobalt, nickel and manganese. The government says retaining this material in India should provide feedstock to domestic recyclers, improve capacity utilisation and reduce import dependence.",
+      "takeaway": "Exam link: connect the export restriction with critical-mineral security, battery recycling, electric vehicles, energy storage and the circular economy. The measure applies until further orders.",
       "source": "Ministry of Commerce & Industry / Press Information Bureau, 11 November 2026",
       "sourceUrl": "https://www.pib.gov.in/PressReleseDetailm.aspx?PRID=2335019&lang=1&reg=3"
     },
     {
       "title": "RBI gives Paytm conditional in-principle approval for wallet business",
-      "summary": "Paytm said the Reserve Bank of India had granted Paytm Payments Services preliminary, in-principle approval to issue and operate prepaid payment instruments, including digital wallets. This is not the same as final authorisation: the company can begin offering the services only after it obtains the final approval. The development could allow the wallet business to operate separately from Paytm Payments Bank, which previously housed it.",
+      "summary": "On 13 November 2026, the Reserve Bank of India granted in-principle authorisation to Paytm Payments Services Limited (PPSL), a wholly owned subsidiary of One 97 Communications, to set up and operate a payment system for issuing prepaid payment instruments (PPIs), including digital wallets. This is only preliminary approval: PPSL cannot begin wallet operations until it receives final authorisation (a Certificate of Authorisation). The RBI has also required a system audit, including cybersecurity checks, and submission of the audit report within six months of its letter. PPSL is distinct from Paytm Payments Bank, whose banking licence was cancelled earlier in 2026.",
       "takeaway": "Exam link: understand prepaid payment instruments (PPIs), digital wallets and the RBI’s role in regulating payment systems. Do not describe the in-principle approval as permission to launch immediately.",
-      "source": "Reuters, 13 November 2026",
-      "sourceUrl": "https://www.reuters.com/world/india/indias-paytm-gets-rbi-preliminary-nod-pre-paid-instruments-including-wallet-2026-11-13/"
+      "source": "The Indian Express, 13 November 2026; Reuters, 13 November 2026",
+      "sourceUrl": "https://indianexpress.com/article/business/paytm-rbi-nod-for-prepaid-payment-instruments-shares-record-high-10961671/lite/"
     },
     {
       "title": "IMD tracks a developing low-pressure system over the Bay of Bengal",
@@ -34,42 +34,42 @@
     {
       "word": "Surge",
       "partOfSpeech": "noun / verb",
-      "meaning": "A sudden and large increase; as a verb, to rise suddenly and strongly.",
-      "example": "Merchandise exports recorded a sharp surge in October.",
-      "synonyms": "rise, jump, spike"
+      "meaning": "A sudden and large increase; as a verb, to increase suddenly and by a large amount.",
+      "example": "Merchandise exports recorded a surge in October.",
+      "synonyms": "sharp rise, spike"
     },
     {
       "word": "Deficit",
       "partOfSpeech": "noun",
-      "meaning": "The amount by which something, especially money, is less than what is needed or what is spent compared with what is received.",
-      "example": "India’s merchandise trade deficit widened in October.",
+      "meaning": "The amount by which something is less than what is needed, expected or available; in trade, the excess of imports over exports.",
+      "example": "India recorded a merchandise trade deficit in October.",
       "synonyms": "shortfall, gap"
     },
     {
       "word": "Prohibit",
       "partOfSpeech": "verb",
-      "meaning": "To officially forbid something by a law, rule or order.",
-      "example": "The notification prohibits the export of the specified battery black mass.",
+      "meaning": "To officially forbid something, usually through a law, rule or order.",
+      "example": "The notification prohibits the export of lithium-ion battery black mass.",
       "synonyms": "ban, forbid"
     },
     {
       "word": "Feedstock",
       "partOfSpeech": "noun",
       "meaning": "Raw material used in an industrial process to make another product.",
-      "example": "Domestic battery recyclers need a steady supply of black mass as feedstock.",
+      "example": "Domestic recyclers need a reliable supply of black mass as feedstock.",
       "synonyms": "raw material, input"
     },
     {
       "word": "Recoverable",
       "partOfSpeech": "adjective",
-      "meaning": "Able to be obtained, collected or brought back.",
-      "example": "Lithium and cobalt are recoverable from used battery black mass.",
-      "synonyms": "retrievable, extractable"
+      "meaning": "Able to be obtained, extracted or brought back.",
+      "example": "Black mass contains recoverable quantities of lithium and cobalt.",
+      "synonyms": "extractable, retrievable"
     },
     {
       "word": "Conditional",
       "partOfSpeech": "adjective",
-      "meaning": "Depending on something else being done or on a particular condition being met.",
+      "meaning": "Depending on a particular condition being met.",
       "example": "The wallet approval is conditional on receiving final authorisation.",
       "synonyms": "subject to, dependent"
     },
@@ -77,29 +77,63 @@
       "word": "Authorisation",
       "partOfSpeech": "noun",
       "meaning": "Official permission to do something.",
-      "example": "The company must obtain final authorisation before starting the wallet service.",
+      "example": "PPSL needs final authorisation before it can start wallet operations.",
       "synonyms": "approval, permission"
     },
     {
       "word": "Compliance",
       "partOfSpeech": "noun",
       "meaning": "The act of obeying a law, rule or official requirement.",
-      "example": "Payment companies must maintain compliance with RBI regulations.",
+      "example": "Payment-system operators must maintain compliance with RBI directions.",
       "synonyms": "adherence, observance"
     },
     {
       "word": "Intensify",
       "partOfSpeech": "verb",
-      "meaning": "To become stronger, greater or more serious; or to make something stronger.",
-      "example": "The weather system may intensify over the central Bay of Bengal.",
+      "meaning": "To become stronger or more extreme, or to make something stronger or more extreme.",
+      "example": "The weather system may intensify over the Bay of Bengal.",
       "synonyms": "strengthen, escalate"
     },
     {
       "word": "Diversification",
       "partOfSpeech": "noun",
-      "meaning": "The process of adding different types or varieties to reduce dependence on one thing or to develop a wider range.",
-      "example": "Export diversification can reduce dependence on a small number of products or markets.",
-      "synonyms": "broadening, variety"
+      "meaning": "The process of adding different types or varieties of something.",
+      "example": "Export diversification can reduce reliance on a small number of products or markets.",
+      "synonyms": "broadening, expansion"
+    }
+  ],
+  "sources": [
+    {
+      "label": "PIB — India’s foreign trade, October 2026 (13 Nov 2026)",
+      "url": "https://www.pib.gov.in/PressReleseDetailm.aspx?PRID=2335914&lang=2&reg=48"
+    },
+    {
+      "label": "PIB — DGFT black mass export prohibition (11 Nov 2026)",
+      "url": "https://www.pib.gov.in/PressReleaseIframePage.aspx?PRID=2335019&lang=2&reg=48"
+    },
+    {
+      "label": "Reuters — Paytm preliminary RBI wallet approval (13 Nov 2026)",
+      "url": "https://www.reuters.com/world/india/indias-paytm-gets-rbi-preliminary-nod-pre-paid-instruments-including-wallet-2026-11-13/"
+    },
+    {
+      "label": "Indian Express — Paytm in-principle authorisation and audit conditions (13 Nov 2026)",
+      "url": "https://indianexpress.com/article/business/paytm-rbi-nod-for-prepaid-payment-instruments-shares-record-high-10961671/lite/"
+    },
+    {
+      "label": "IMD — Press release on Bay of Bengal low-pressure area (13 Nov 2026)",
+      "url": "https://internal.imd.gov.in/press_release/20261113_pr_5488.pdf"
+    },
+    {
+      "label": "Cambridge Dictionary — Feedstock",
+      "url": "https://dictionary.cambridge.org/dictionary/english/feedstock"
+    },
+    {
+      "label": "Cambridge Dictionary — Surge",
+      "url": "https://dictionary.cambridge.org/dictionary/english/surge"
+    },
+    {
+      "label": "Cambridge Dictionary — Diversification",
+      "url": "https://dictionary.cambridge.org/dictionary/english/diversification"
     }
   ]
 }
