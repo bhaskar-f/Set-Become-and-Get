@@ -1,0 +1,105 @@
+{
+  "date": "2026-11-14",
+  "currentAffairs": [
+    {
+      "title": "India’s merchandise exports reach a record in October 2026",
+      "summary": "India’s merchandise exports were estimated at US$49.47 billion in October 2026, up 45.06% from US$34.11 billion in October 2025. The Ministry of Commerce and Industry also estimated total exports of goods and services at US$89.99 billion, a 29.90% year-on-year rise. Merchandise imports stood at US$89.35 billion, leaving a merchandise trade deficit of about US$39.88 billion. The services figure for October is an estimate because the latest RBI services data available to the ministry was for September.",
+      "takeaway": "Exam link: distinguish merchandise trade from total trade (goods + services). Strong export growth can coexist with a wider merchandise trade deficit when imports are higher.",
+      "source": "Ministry of Commerce & Industry / Press Information Bureau, 13 November 2026",
+      "sourceUrl": "https://www.pib.gov.in/PressReleseDetailm.aspx?PRID=2335914&lang=2&reg=48"
+    },
+    {
+      "title": "DGFT prohibits export of lithium-ion battery black mass",
+      "summary": "The Directorate General of Foreign Trade changed the export policy for lithium-ion battery black mass under ITC(HS) code 85491400 from ‘Free’ to ‘Prohibited’ through Notification No. 49/2026-27, dated 10 November 2026. Black mass is the powder obtained by shredding used lithium-ion batteries and battery-manufacturing waste. It contains recoverable critical minerals such as lithium, cobalt, nickel and manganese. The stated policy aim is to make more material available to domestic recyclers and strengthen recovery of critical minerals in India.",
+      "takeaway": "Exam link: connect this measure with critical-mineral security, battery recycling, electric mobility and the circular economy. The notification says the prohibition applies until further orders.",
+      "source": "Ministry of Commerce & Industry / Press Information Bureau, 11 November 2026",
+      "sourceUrl": "https://www.pib.gov.in/PressReleseDetailm.aspx?PRID=2335019&lang=1&reg=3"
+    },
+    {
+      "title": "RBI gives Paytm conditional in-principle approval for wallet business",
+      "summary": "Paytm said the Reserve Bank of India had granted Paytm Payments Services preliminary, in-principle approval to issue and operate prepaid payment instruments, including digital wallets. This is not the same as final authorisation: the company can begin offering the services only after it obtains the final approval. The development could allow the wallet business to operate separately from Paytm Payments Bank, which previously housed it.",
+      "takeaway": "Exam link: understand prepaid payment instruments (PPIs), digital wallets and the RBI’s role in regulating payment systems. Do not describe the in-principle approval as permission to launch immediately.",
+      "source": "Reuters, 13 November 2026",
+      "sourceUrl": "https://www.reuters.com/world/india/indias-paytm-gets-rbi-preliminary-nod-pre-paid-instruments-including-wallet-2026-11-13/"
+    },
+    {
+      "title": "IMD tracks a developing low-pressure system over the Bay of Bengal",
+      "summary": "The India Meteorological Department reported a low-pressure area over the southeast Bay of Bengal. Its forecast said the system was likely to become a well-marked low-pressure area on 14 November, develop into a depression around the morning of 15 November, and could intensify further into a cyclonic storm over the central Bay of Bengal around the evening of 16 November. These are forecast stages, not confirmation that a cyclone had already formed.",
+      "takeaway": "Exam link: know the sequence low-pressure area → well-marked low-pressure area → depression → cyclonic storm. Treat forecast language as probability, not a confirmed event.",
+      "source": "India Meteorological Department, 13 November 2026",
+      "sourceUrl": "https://mausam.imd.gov.in/Forecast/coastal_bulletin_new.php"
+    }
+  ],
+  "vocabulary": [
+    {
+      "word": "Surge",
+      "partOfSpeech": "noun / verb",
+      "meaning": "A sudden and large increase; as a verb, to rise suddenly and strongly.",
+      "example": "Merchandise exports recorded a sharp surge in October.",
+      "synonyms": "rise, jump, spike"
+    },
+    {
+      "word": "Deficit",
+      "partOfSpeech": "noun",
+      "meaning": "The amount by which something, especially money, is less than what is needed or what is spent compared with what is received.",
+      "example": "India’s merchandise trade deficit widened in October.",
+      "synonyms": "shortfall, gap"
+    },
+    {
+      "word": "Prohibit",
+      "partOfSpeech": "verb",
+      "meaning": "To officially forbid something by a law, rule or order.",
+      "example": "The notification prohibits the export of the specified battery black mass.",
+      "synonyms": "ban, forbid"
+    },
+    {
+      "word": "Feedstock",
+      "partOfSpeech": "noun",
+      "meaning": "Raw material used in an industrial process to make another product.",
+      "example": "Domestic battery recyclers need a steady supply of black mass as feedstock.",
+      "synonyms": "raw material, input"
+    },
+    {
+      "word": "Recoverable",
+      "partOfSpeech": "adjective",
+      "meaning": "Able to be obtained, collected or brought back.",
+      "example": "Lithium and cobalt are recoverable from used battery black mass.",
+      "synonyms": "retrievable, extractable"
+    },
+    {
+      "word": "Conditional",
+      "partOfSpeech": "adjective",
+      "meaning": "Depending on something else being done or on a particular condition being met.",
+      "example": "The wallet approval is conditional on receiving final authorisation.",
+      "synonyms": "subject to, dependent"
+    },
+    {
+      "word": "Authorisation",
+      "partOfSpeech": "noun",
+      "meaning": "Official permission to do something.",
+      "example": "The company must obtain final authorisation before starting the wallet service.",
+      "synonyms": "approval, permission"
+    },
+    {
+      "word": "Compliance",
+      "partOfSpeech": "noun",
+      "meaning": "The act of obeying a law, rule or official requirement.",
+      "example": "Payment companies must maintain compliance with RBI regulations.",
+      "synonyms": "adherence, observance"
+    },
+    {
+      "word": "Intensify",
+      "partOfSpeech": "verb",
+      "meaning": "To become stronger, greater or more serious; or to make something stronger.",
+      "example": "The weather system may intensify over the central Bay of Bengal.",
+      "synonyms": "strengthen, escalate"
+    },
+    {
+      "word": "Diversification",
+      "partOfSpeech": "noun",
+      "meaning": "The process of adding different types or varieties to reduce dependence on one thing or to develop a wider range.",
+      "example": "Export diversification can reduce dependence on a small number of products or markets.",
+      "synonyms": "broadening, variety"
+    }
+  ]
+}
