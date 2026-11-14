@@ -57,8 +57,8 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (/^\\/number-rush(?:\\/|$)/.test(url.pathname) ||
-      /^\\/offline\\.(?:html|css|js)$/.test(url.pathname) ||
+  if ((url.pathname === '/number-rush' || url.pathname.startsWith('/number-rush/')) ||
+      ['/offline.html', '/offline.css', '/offline.js'].includes(url.pathname) ||
       url.pathname === '/logo.png') {
     event.respondWith(caches.match(request).then(cached => cached || fetch(request)));
   }
@@ -66,7 +66,7 @@ self.addEventListener('fetch', event => {
 
 async function fallbackNavigation(pathname) {
   const cache = await caches.open(CACHE);
-  if (/^\\/number-rush(?:\\/|$)/.test(pathname)) {
+  if (pathname === '/number-rush' || pathname.startsWith('/number-rush/')) {
     return (await cache.match('/number-rush/index.html')) || cache.match('/offline.html');
   }
   return cache.match('/offline.html');
