@@ -20,7 +20,7 @@ const save = async (req, res) => {
   const { date, currentAffairs, vocabulary, published } = req.body;
   if (!DATE_RE.test(date)) throw new AppError(400, 'INVALID_DATE', 'Use YYYY-MM-DD.');
   if (!Array.isArray(currentAffairs) || currentAffairs.length > 20) throw new AppError(400, 'INVALID_CURRENT_AFFAIRS', 'Add up to 20 current-affairs cards.');
-  if (!Array.isArray(vocabulary) || vocabulary.length !== 10) throw new AppError(400, 'INVALID_VOCABULARY', 'Daily vocabulary must contain exactly 10 words.');
+  if (!Array.isArray(vocabulary) || (published && vocabulary.length !== 10) || vocabulary.length > 10) throw new AppError(400, 'INVALID_VOCABULARY', 'Published daily vocabulary must contain exactly 10 words; drafts may be incomplete.');
   if (currentAffairs.some(x => !x.title?.trim() || !x.summary?.trim())) throw new AppError(400, 'INVALID_CURRENT_AFFAIRS', 'Every current-affairs card needs a title and summary.');
   if (vocabulary.some(x => !x.word?.trim() || !x.meaning?.trim() || !x.example?.trim())) throw new AppError(400, 'INVALID_VOCABULARY', 'Every word needs a meaning and example.');
   const item = await DailyLearning.findOneAndUpdate(
