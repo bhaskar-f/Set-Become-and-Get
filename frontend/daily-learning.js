@@ -51,6 +51,12 @@
     } catch { $('#dailyLearningDeck').innerHTML = '<p class="daily-empty">Daily Learning is temporarily unavailable.</p>'; }
   }
   function openDailyLearning() {
+    // The menu can be clicked before the API request finishes. Never build the
+    // modal from null data; take the visitor to the visible section instead.
+    if (!data || !Array.isArray(data.currentAffairs) || !Array.isArray(data.vocabulary)) {
+      root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     const backdrop = document.querySelector('#modalBackdrop'), content = document.querySelector('#modalContent');
     if (!backdrop || !content) { root.scrollIntoView({ behavior: 'smooth' }); return; }
     content.replaceChildren();
