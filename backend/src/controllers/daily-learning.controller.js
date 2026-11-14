@@ -1,6 +1,7 @@
 const DailyLearning = require('../models/daily-learning.model');
 const { success, AppError } = require('../utils/http');
 const { AuditLog } = require('../models');
+const researchedToday = require('../../../frontend/daily-learning-today.json');
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
 const publicToday = async (req, res) => {
@@ -10,11 +11,15 @@ const publicToday = async (req, res) => {
 };
 const list = async (req, res) => {
   const items = await DailyLearning.find().sort({ date: -1 }).limit(45).select('date published currentAffairs vocabulary updatedAt').lean();
-  success(res, items);
+  if (!items.some(item => item.date === researchedToday.date)) items.unshift({ date: researchedToday.date, published: false, currentAffairs: researchedToday.currentAffairs, vocabulary: researchedToday.vocabulary, updatedAt: null, isResearchSeed: true });
+  success(res, items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 45));
 };
 const get = async (req, res) => {
   if (!DATE_RE.test(req.params.date)) throw new AppError(400, 'INVALID_DATE', 'Use YYYY-MM-DD.');
-  success(res, await DailyLearning.findOne({ date: req.params.date }).lean());
+  const item = await DailyLearning.findOne({ date: req.params.date }).lean();
+  if (item) return success(res, item);
+  if (req.params.date === researchedToday.date) return success(res, { date: researchedToday.date, published: false, currentAffairs: researchedToday.currentAffairs, vocabulary: researchedToday.vocabulary, isResearchSeed: true });
+  success(res, null);
 };
 const save = async (req, res) => {
   const { date, currentAffairs, vocabulary, published } = req.body;
